@@ -5,6 +5,7 @@ import util.Config;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.net.ServerSocket;
 
 public class CloudController implements ICloudControllerCli, Runnable {
 
@@ -12,6 +13,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	private Config config;
 	private InputStream userRequestStream;
 	private PrintStream userResponseStream;
+	private ServerSocket serverSocket;
 
 	/**
 	 * @param componentName
@@ -36,6 +38,16 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	@Override
 	public void run() {
 		// TODO
+		Config userconfig = new Config("user");
+		// test
+		System.out.println(userconfig.listKeys());
+		try {
+			serverSocket = new ServerSocket(config.getInt("tcp.port"));
+			
+		}	catch (IOException e) {
+			throw new RuntimeException("Cannot listen on TCP port.", e);
+		}
+		
 	}
 
 	@Override
@@ -62,9 +74,10 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	 *            component
 	 */
 	public static void main(String[] args) {
-		CloudController cloudController = new CloudController(args[0],
+		CloudController cloudcontroller = new CloudController(args[0],
 				new Config("controller"), System.in, System.out);
 		// TODO: start the cloud controller
+		cloudcontroller.run();
 	}
 
 }

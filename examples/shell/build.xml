@@ -27,7 +27,7 @@
 
 	<target name="compile" description="Compile project.">
 		<mkdir dir="${build.dir}" />
-		<javac srcdir="${src.dir}" destdir="${build.dir}" classpathref="project.classpath" debug="true" deprecation="true" includeantruntime="false" />
+		<javac compiler="javac1.7" srcdir="${src.dir}" destdir="${build.dir}" classpathref="project.classpath" debug="true" deprecation="true" includeantruntime="false" />
 		<copy todir="${build.dir}">
 			<fileset dir="${src.resources.dir}">
 				<include name="*.properties" />

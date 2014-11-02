@@ -88,6 +88,7 @@ public class Client implements IClientCli, Runnable {
 		Client client = new Client(args[0], new Config("client"), System.in,
 				System.out);
 		// TODO: start the client
+		client.run();
 	}
 
 	// --- Commands needed for Lab 2. Please note that you do not have to

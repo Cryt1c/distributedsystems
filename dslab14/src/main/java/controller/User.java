@@ -13,6 +13,22 @@ public class User {
 	String credits = "";
 	boolean loggedin = false;
 	
+	public boolean isLoggedin() {
+		return loggedin;
+	}
+
+	public void setLoggedin(boolean loggedin) {
+		this.loggedin = loggedin;
+	}
+
+	public String getPassword() {
+		return password;
+	}
+
+	public void setPassword(String password) {
+		this.password = password;
+	}
+
 	public String getCredits() {
 		return credits;
 	}
@@ -28,8 +44,7 @@ public class User {
 
 	@Override
 	public String toString() {
-		return "User [name=" + name + ", password=" + password + ", credits="
-				+ credits + "]";
+		return name + (loggedin ? " online " : " offline ") + "Credits: " + credits;
 	}
 
 	public String getName() {

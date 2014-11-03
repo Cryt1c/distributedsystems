@@ -68,7 +68,7 @@ public class Node implements INodeCli, Runnable {
 		this.userRequestStream = userRequestStream;
 		this.userResponseStream = userResponseStream;
 		
-		String message = componentName + config.getString("node.operators");
+		String message = componentName + " " + config.getString("node.operators");
 		byte[] buf = message.getBytes();
 		String controllerhost = config.getString("controller.host");
 		int controllerudpport = config.getInt("controller.udp.port");
@@ -85,7 +85,7 @@ public class Node implements INodeCli, Runnable {
 		createTCPSocket();
 		startTCPThread();
 		createUDPSocket();
-		startUDPThread();
+		sendIsAlive();
 	}
 
 	// register this object at the shell and run the shell
@@ -101,7 +101,7 @@ public class Node implements INodeCli, Runnable {
 	}
 
 	// starts UDP-Thread
-	private void startUDPThread() {
+	private void sendIsAlive() {
 		timer.schedule(task, config.getInt("node.alive"), config.getInt("node.alive"));
 		executorService.execute(new Runnable() {
 			public void run() {

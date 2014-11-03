@@ -8,10 +8,8 @@ import java.net.DatagramSocket;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -19,7 +17,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import util.Config;
-
 
 public class CloudController implements ICloudControllerCli, Runnable {
 
@@ -30,22 +27,20 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	private ServerSocket serverSocket;
 	private DatagramSocket datagramSocket;
 	private HashMap<String, User> users = new HashMap<String, User>();
-	private List<Node> nodes = new ArrayList<Node>();
-	private List<String> isalives = new ArrayList<String>();
+	private NodeSet nodeSet = new NodeSet();
+	private Map<String, Long> lastpacket = new HashMap<String, Long>();
 	private ExecutorService executorService = Executors.newFixedThreadPool(10);
 	private CloudShell shell;
 	private Timer timer = new Timer();
-	
+
 	// Timer for the node.isAlive check
 	TimerTask task = new TimerTask() {
 
 		@Override
 		public void run() {
-			//check if Nodes are still alive
-			for(Node element: nodes) {
-				element.checkStatus(isalives);
-			}
-			System.out.println("checkAlive");
+			// check if Nodes are still alive
+			nodeSet.checkStatus(lastpacket);
+			// System.out.println("checkalive");
 		}
 
 	};
@@ -73,33 +68,35 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	public void run() {
 		extractConfig();
 		startShell();
-//		createTCPSocket();
-//		startTCPThread();
+		createTCPSocket();
+		startTCPThread();
 		createUDPSocket();
-		startUDPThread();
-		
+		checkIsAlive();
 
 	}
-	
-	// adds all users from the config-file to the users-list and sets the credits
+
+	// adds all users from the config-file to the users-list and sets the
+	// credits
 	private void extractConfig() {
 		Config userconfig = new Config("user");
 		Iterator<String> iter = userconfig.listKeys().iterator();
 		while (iter.hasNext()) {
 			String temp = iter.next().toString();
-			if(temp.contains("password")) {
+			if (temp.contains("password")) {
 				String name;
 				name = temp.substring(0, temp.length() - 9);
 				users.put(name, new User(name, userconfig.getString(temp)));
-				users.get(name).setCredits(userconfig.getString(name + ".credits"));
+				users.get(name).setCredits(
+						userconfig.getString(name + ".credits"));
 			}
 
 		}
 	}
-	
+
 	// register this object at the shell and run the shell
 	private void startShell() {
-		this.shell = new CloudShell(componentName, users, userRequestStream, userResponseStream);
+		this.shell = new CloudShell(componentName, users, userRequestStream,
+				userResponseStream);
 		shell.register(this);
 		executorService.execute(new Runnable() {
 			public void run() {
@@ -110,26 +107,43 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	}
 
 	// starts UDP-Thread
-	private void startUDPThread() {
-		timer.schedule(task, config.getInt("node.checkPeriod"), config.getInt("node.checkPeriod"));
+	private void checkIsAlive() {
+		timer.schedule(task, config.getInt("node.checkPeriod"),
+				config.getInt("node.checkPeriod"));
 		executorService.execute(new Runnable() {
 			public void run() {
 				Thread.currentThread().setName("udpservice");
 				byte[] buf = new byte[256];
 				DatagramPacket packet = new DatagramPacket(buf, buf.length);
-				while(true) {
+				while (true) {
+
+					// receive the packet, extracts the data and creates new
+					// nodes if needed
 					try {
-						System.out.println("datagramSocket receiving");
 						datagramSocket.receive(packet);
-						System.out.println(new String(packet.getData()).trim());
+
+						String[] nameoperators = new String(packet.getData())
+								.split(" ");
+
+						nodeSet.add(new Node(packet.getAddress().toString(),
+								500, packet.getPort(), nameoperators[0],
+								nameoperators[1], config.getInt("node.timeout")));
+
+						lastpacket.put(nameoperators[0],
+								System.currentTimeMillis());
+
+//						System.out.println("packet received: "
+//								+ new String(packet.getData()).trim());
+
 					} catch (IOException e) {
-						throw new RuntimeException("Cannot listen on UDP port.", e);
+						throw new RuntimeException(
+								"Cannot listen on UDP port.", e);
 					}
 				}
 			}
 		});
 	}
-	
+
 	// creates a new UDP socket and waits for new incoming connections
 	private void createUDPSocket() {
 		try {
@@ -140,14 +154,14 @@ public class CloudController implements ICloudControllerCli, Runnable {
 			e1.printStackTrace();
 		}
 	}
-	
+
 	// start tcpservice-Thread
 	private void startTCPThread() {
 		executorService.execute(new Runnable() {
 			public void run() {
 				Thread.currentThread().setName("tcpservice");
 
-				while(true) {
+				while (true) {
 					Socket clientSocket = null;
 					try {
 						clientSocket = serverSocket.accept();
@@ -161,36 +175,36 @@ public class CloudController implements ICloudControllerCli, Runnable {
 			}
 		});
 	}
-	
+
 	// creates a new TCP socket and waits for new incoming connections
 	private void createTCPSocket() {
 		try {
 			serverSocket = new ServerSocket(config.getInt("tcp.port"));
 			System.out.println("serverSocket created.");
-		}	catch (IOException e) {
+		} catch (IOException e) {
 			throw new RuntimeException("Cannot listen on TCP port.", e);
 		}
 	}
 
-	//returns the nodes as a String
+	// returns the nodes as a String
 	@Override
 	public String nodes() throws IOException {
 		int count = 1;
 		String result = "";
-		nodes.add(new Node("123.123.132.123", false, 100, 20));
-		for(Node entry : nodes) {
+
+		for (Node entry : nodeSet.getSet()) {
 			result += count++ + ". " + entry + "\n";
 		}
 		return result;
 	}
 
-	//returns the users as a String
+	// returns the users as a String
 	@Override
 	public String users() throws IOException {
 		int count = 1;
 		String result = "";
 
-		for(Map.Entry<String, User> entry : users.entrySet()) {
+		for (Map.Entry<String, User> entry : users.entrySet()) {
 			result += count++ + ". " + entry.getValue() + "\n";
 		}
 		return result;
@@ -206,7 +220,8 @@ public class CloudController implements ICloudControllerCli, Runnable {
 			} catch (IOException e) {
 				// Ignored because we cannot handle it
 			}
-		if (datagramSocket != null) datagramSocket.close();
+		if (datagramSocket != null)
+			datagramSocket.close();
 		return null;
 	}
 
@@ -222,5 +237,3 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		cloudcontroller.run();
 	}
 }
-
-

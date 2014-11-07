@@ -1,7 +1,7 @@
 /**
  * 
  */
-package node;
+package client;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -12,15 +12,16 @@ import cli.Shell;
 
 /**
  * @author David
- *
+ * 
  */
-public class NodeShell {
+public class ClientShell {
 
 	private Shell shell;
-	private Node node;
+	private Client client;
 
-	public NodeShell(String componentName, InputStream userRequestStream, OutputStream userResponseStream) {
-			
+	public ClientShell(String componentName, InputStream userRequestStream,
+			OutputStream userResponseStream) {
+
 		/*
 		 * First, create a new Shell instance and provide the name of the
 		 * component, an InputStream as well as an OutputStream. If you want to
@@ -51,13 +52,13 @@ public class NodeShell {
 				+ " up and waiting for commands!");
 	}
 
-		// beendet den Cloudcontroller
+	// beendet den Cloudcontroller
 	@Command
 	public String exit() {
 		// Afterwards stop the Shell from listening for commands
 		shell.close();
 		try {
-			node.exit();
+			client.exit();
 		} catch (IOException e) {
 			System.out.println("couldn't log out!");
 			e.printStackTrace();
@@ -65,8 +66,63 @@ public class NodeShell {
 		return "Shut down completed! Bye ..";
 	}
 
-	public void register(Node mainclass) {
-		node = mainclass;
+	@Command
+	public String login(String username, String password) {
+		try {
+			return client.login(username, password);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return("couldn't login!");
+		}
+	}
+	
+	@Command
+	public String logout() {
+		try {
+			return client.logout();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return("couldn't logout!");
+		}
+	}
+	
+	@Command
+	public String credits() {
+		try {
+			return client.credits();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return("couldn't lookup credits!");
+		}
+	}
+	
+	@Command
+	public String list() {
+		try {
+			return client.list();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return("couldn't list operations");
+		}
+	}
+	
+	@Command
+	public String compute(String term) {
+		try {
+			return client.compute(term);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return("couldn't compute " + term);
+		}
+	}
+
+	public void register(Client mainclass) {
+		client = mainclass;
 	}
 
 }

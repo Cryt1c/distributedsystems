@@ -17,7 +17,6 @@ import cli.Shell;
  */
 public class CloudShell {
 
-	private HashMap<String, User> users;
 	private Shell shell;
 	private String loggedInUser = null;
 	private CloudController cloudcontroller;
@@ -25,7 +24,6 @@ public class CloudShell {
 	public CloudShell(String componentName, HashMap<String, User> users,
 			InputStream userRequestStream, OutputStream userResponseStream) {
 		
-		this.users = users;
 		
 		/*
 		 * First, create a new Shell instance and provide the name of the

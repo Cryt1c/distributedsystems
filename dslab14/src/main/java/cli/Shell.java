@@ -79,7 +79,14 @@ public class Shell implements Runnable, Closeable {
 				Object result;
 				try {
 					result = invoke(line);
-				} catch (Throwable throwable) {
+
+				
+				} 
+				// TODO: Test
+				catch (IllegalArgumentException e) {
+					result = "Unkown Command!";
+				}
+				catch (Throwable throwable) {
 					ByteArrayOutputStream str = new ByteArrayOutputStream(1024);
 					throwable.printStackTrace(new PrintStream(str, true));
 					result = str.toString();

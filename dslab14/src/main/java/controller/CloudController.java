@@ -20,13 +20,14 @@ import util.Config;
 
 public class CloudController implements ICloudControllerCli, Runnable {
 
+	static CloudController cloudcontroller;
 	private String componentName;
 	private Config config;
 	private InputStream userRequestStream;
 	private PrintStream userResponseStream;
 	private ServerSocket serverSocket;
 	private DatagramSocket datagramSocket;
-	private HashMap<String, User> users = new HashMap<String, User>();
+	HashMap<String, User> users = new HashMap<String, User>();
 	private NodeSet nodeSet = new NodeSet();
 	private Map<String, Long> lastpacket = new HashMap<String, Long>();
 	private ExecutorService executorService = Executors.newFixedThreadPool(10);
@@ -87,7 +88,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 				name = temp.substring(0, temp.length() - 9);
 				users.put(name, new User(name, userconfig.getString(temp)));
 				users.get(name).setCredits(
-						userconfig.getString(name + ".credits"));
+					Integer.parseInt(userconfig.getString(name + ".credits")));
 			}
 
 		}
@@ -97,7 +98,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	private void startShell() {
 		this.shell = new CloudShell(componentName, users, userRequestStream,
 				userResponseStream);
-		shell.register(this);
+		shell.register(cloudcontroller);
 		executorService.execute(new Runnable() {
 			public void run() {
 				Thread.currentThread().setName("shellservice");
@@ -165,11 +166,13 @@ public class CloudController implements ICloudControllerCli, Runnable {
 					Socket clientSocket = null;
 					try {
 						clientSocket = serverSocket.accept();
+						if(!clientSocket.equals(null)) {
+							executorService.execute(new ClientWorker(clientSocket, cloudcontroller));
+						}
 					} catch (IOException e) {
 						throw new RuntimeException(
 								"Error accepting client connection", e);
 					}
-					executorService.execute(new ClientWorker(clientSocket));
 				}
 
 			}
@@ -231,7 +234,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	 *            component
 	 */
 	public static void main(String[] args) {
-		CloudController cloudcontroller = new CloudController(args[0],
+		cloudcontroller = new CloudController(args[0],
 				new Config("controller"), System.in, System.out);
 		// TODO: start the cloud controller
 		cloudcontroller.run();

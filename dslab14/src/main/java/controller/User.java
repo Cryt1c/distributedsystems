@@ -8,17 +8,18 @@ package controller;
  *
  */
 public class User {
-	String name = "";
-	String password = "";
-	String credits = "";
-	boolean loggedin = false;
+	private String name = "";
+	private String password = "";
+	private int credits;
+	private boolean loggedin = false;
 	
 	public boolean isLoggedin() {
 		return loggedin;
 	}
 
-	public void setLoggedin(boolean loggedin) {
+	public User setLoggedin(boolean loggedin) {
 		this.loggedin = loggedin;
+		return this;
 	}
 
 	public String getPassword() {
@@ -29,11 +30,11 @@ public class User {
 		this.password = password;
 	}
 
-	public String getCredits() {
+	public int getCredits() {
 		return credits;
 	}
 
-	public void setCredits(String credits) {
+	public void setCredits(int credits) {
 		this.credits = credits;
 	}
 

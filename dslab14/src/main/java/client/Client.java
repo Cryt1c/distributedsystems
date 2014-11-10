@@ -91,7 +91,8 @@ public class Client implements IClientCli, Runnable {
 
 
 	}
-	
+
+	//TODO: delete
 //	// start tcpservice-Thread
 //	private void startTCPThread() {
 //		executorService.execute(new Runnable() {
@@ -133,7 +134,7 @@ public class Client implements IClientCli, Runnable {
 
 	@Override
 	public String buy(long credits) throws IOException {
-		serverWriter.println("buy" + credits);
+		serverWriter.println("buy " + credits);
 		return serverReader.readLine();
 	}
 
@@ -145,14 +146,17 @@ public class Client implements IClientCli, Runnable {
 
 	@Override
 	public String compute(String term) throws IOException {
-		serverWriter.println(term);
+		serverWriter.println("compute " + term);
 		return serverReader.readLine();
 	}
 
 	@Override
 	public String exit() throws IOException {
-		// TODO Auto-generated method stub
-		return "bye bye!";
+		executorService.shutdownNow();
+		if(socket != null) {
+			socket.close();
+		}
+		return "client shutdown";
 	}
 
 	/**
@@ -162,7 +166,6 @@ public class Client implements IClientCli, Runnable {
 	public static void main(String[] args) {
 		Client client = new Client(args[0], new Config("client"), System.in,
 				System.out);
-		// TODO: start the client
 		client.run();
 	}
 

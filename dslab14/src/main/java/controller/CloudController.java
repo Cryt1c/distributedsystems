@@ -27,7 +27,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	private PrintStream userResponseStream;
 	private ServerSocket serverSocket;
 	private DatagramSocket datagramSocket;
-	HashMap<String, User> users = new HashMap<String, User>();
+	private HashMap<String, User> users = new HashMap<String, User>();
 	private NodeSet nodeSet = new NodeSet();
 	private Map<String, Long> lastpacket = new HashMap<String, Long>();
 	private ExecutorService executorService = Executors.newFixedThreadPool(10);
@@ -67,6 +67,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 
 	@Override
 	public void run() {
+		cloudcontroller = this;
 		extractConfig();
 		startShell();
 		createTCPSocket();
@@ -88,7 +89,8 @@ public class CloudController implements ICloudControllerCli, Runnable {
 				name = temp.substring(0, temp.length() - 9);
 				users.put(name, new User(name, userconfig.getString(temp)));
 				users.get(name).setCredits(
-					Integer.parseInt(userconfig.getString(name + ".credits")));
+						Integer.parseInt(userconfig
+								.getString(name + ".credits")));
 			}
 
 		}
@@ -114,31 +116,36 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		executorService.execute(new Runnable() {
 			public void run() {
 				Thread.currentThread().setName("udpservice");
-				byte[] buf = new byte[256];
-				DatagramPacket packet = new DatagramPacket(buf, buf.length);
-				while (true) {
 
+				while (true) {
+					byte[] buf = new byte[256];
+					DatagramPacket packet = new DatagramPacket(buf, buf.length);
+					
 					// receive the packet, extracts the data and creates new
 					// nodes if needed
 					try {
 						datagramSocket.receive(packet);
-
+						//System.out.println("receive: " + new String(packet.getData()).trim());
 						String[] nameoperators = new String(packet.getData())
 								.split(" ");
 
-						nodeSet.add(new Node(packet.getAddress().toString(),
-								500, packet.getPort(), nameoperators[0],
-								nameoperators[1], config.getInt("node.timeout")));
-
+						if (nodeSet.alreadyIn(nameoperators[0] + " "
+								+ nameoperators[1].trim())) {
+							
+							nodeSet.add(new Node(
+									packet.getAddress(), 500, Integer.parseInt(nameoperators[2].trim()), nameoperators[0],
+									nameoperators[1].trim(), config
+											.getInt("node.timeout")));
+						}
 						lastpacket.put(nameoperators[0],
 								System.currentTimeMillis());
 
-//						System.out.println("packet received: "
-//								+ new String(packet.getData()).trim());
+						// System.out.println("packet received: "
+						// + new String(packet.getData()).trim());
 
 					} catch (IOException e) {
-						throw new RuntimeException(
-								"Cannot listen on UDP port.", e);
+						System.out.println("Error occurred while waiting for/communicating with client");
+						break;
 					}
 				}
 			}
@@ -149,7 +156,6 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	private void createUDPSocket() {
 		try {
 			datagramSocket = new DatagramSocket(config.getInt("udp.port"));
-			System.out.println("datagramSocket created.");
 		} catch (SocketException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
@@ -166,12 +172,13 @@ public class CloudController implements ICloudControllerCli, Runnable {
 					Socket clientSocket = null;
 					try {
 						clientSocket = serverSocket.accept();
-						if(!clientSocket.equals(null)) {
-							executorService.execute(new ClientWorker(clientSocket, cloudcontroller));
+						if (!clientSocket.equals(null)) {
+							executorService.execute(new ClientWorker(
+									clientSocket, cloudcontroller));
 						}
 					} catch (IOException e) {
-						throw new RuntimeException(
-								"Error accepting client connection", e);
+						System.out.println("Error occurred while waiting for/communicating with client");
+						break;
 					}
 				}
 
@@ -183,7 +190,6 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	private void createTCPSocket() {
 		try {
 			serverSocket = new ServerSocket(config.getInt("tcp.port"));
-			System.out.println("serverSocket created.");
 		} catch (IOException e) {
 			throw new RuntimeException("Cannot listen on TCP port.", e);
 		}
@@ -225,7 +231,15 @@ public class CloudController implements ICloudControllerCli, Runnable {
 			}
 		if (datagramSocket != null)
 			datagramSocket.close();
-		return null;
+		return "cloudcontroller shutdown";
+	}
+
+	public HashMap<String, User> getUsers() {
+		return users;
+	}
+
+	public NodeSet getNodeSet() {
+		return nodeSet;
 	}
 
 	/**
@@ -234,7 +248,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	 *            component
 	 */
 	public static void main(String[] args) {
-		cloudcontroller = new CloudController(args[0],
+		CloudController cloudcontroller = new CloudController(args[0],
 				new Config("controller"), System.in, System.out);
 		// TODO: start the cloud controller
 		cloudcontroller.run();

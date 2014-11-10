@@ -1,17 +1,18 @@
 package controller;
 
+import java.net.InetAddress;
 import java.util.Map;
 
 public class Node {
-	String ip;
+	InetAddress ip;
 	String name;
 	String operators;
 	boolean online = false;
-	int usage = 0;
+	int usage;
 	int port;
-	int timeout = 0;
+	int timeout;
 
-	public Node(String ip, int usage, int port, String name, String operators,
+	public Node(InetAddress ip, int usage, int port, String name, String operators,
 			int timeout) {
 		this.ip = ip;
 		this.usage = usage;
@@ -21,12 +22,12 @@ public class Node {
 		this.timeout = timeout;
 	}
 
-	public String getIP() {
-		return ip;
+	public int getPort() {
+		return port;
 	}
 
-	public void setIP(String ip) {
-		this.ip = ip;
+	public InetAddress getIP() {
+		return ip;
 	}
 
 	public boolean isOnline() {
@@ -41,11 +42,15 @@ public class Node {
 		return usage;
 	}
 
-	public void setUsage(int usage) {
+	public synchronized void setUsage(int usage) {
 		this.usage = usage;
 	}
-
-	public String signature() {
+	
+	public String getOperators() {
+		return operators;
+	}
+	
+	public String getSignature() {
 		return name + " " + operators;
 	}
 

@@ -5,10 +5,11 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.InetSocketAddress;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
@@ -36,8 +37,9 @@ public class Node implements INodeCli, Runnable {
 		@Override
 		public void run() {
 			try {
+				//System.out.println("sendAlive: " + new String(packet.getData()));
 				datagramSocket.send(packet);
-				System.out.println("sendAlive");
+				//System.out.println("sendAlive");
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -63,20 +65,20 @@ public class Node implements INodeCli, Runnable {
 		this.config = config;
 		this.userRequestStream = userRequestStream;
 		this.userResponseStream = userResponseStream;
-		
-		String message = componentName + " " + config.getString("node.operators");
+		String message = componentName + " " + config.getString("node.operators") + " " + config.getString("tcp.port");
 		byte[] buf = message.getBytes();
-		String controllerhost = config.getString("controller.host");
-		int controllerudpport = config.getInt("controller.udp.port");
-		InetSocketAddress socketAdress = new InetSocketAddress(controllerhost, controllerudpport);
-		this.packet = new DatagramPacket(buf, buf.length, socketAdress);
-		// TODO
+		
+		try {
+			this.packet = new DatagramPacket(buf, buf.length, InetAddress.getByName(config.getString("controller.host")),
+					config.getInt("controller.udp.port"));
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	@Override
 	public void run() {
-		// TODO
-
 		startShell();
 		createTCPSocket();
 		startTCPThread();
@@ -99,28 +101,12 @@ public class Node implements INodeCli, Runnable {
 	// starts UDP-Thread
 	private void sendIsAlive() {
 		timer.schedule(task, config.getInt("node.alive"), config.getInt("node.alive"));
-		executorService.execute(new Runnable() {
-			public void run() {
-				Thread.currentThread().setName("udpservice");
-				byte[] buf = new byte[256];
-				DatagramPacket packet = new DatagramPacket(buf, buf.length);
-				while(true) {
-					try {
-						System.out.println("datagramSocket receiving");
-						datagramSocket.receive(packet);
-					} catch (IOException e) {
-						throw new RuntimeException("Cannot listen on UDP port.", e);
-					}
-				}
-			}
-		});
 	}
 
 	// creates a new UDP socket and waits for new incoming connections
 	private void createUDPSocket() {
 		try {
 			datagramSocket = new DatagramSocket();
-			System.out.println("datagramSocket created.");
 		} catch (SocketException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
@@ -132,16 +118,19 @@ public class Node implements INodeCli, Runnable {
 		executorService.execute(new Runnable() {
 			public void run() {
 				Thread.currentThread().setName("tcpservice");
-
 				while(true) {
 					Socket clientSocket = null;
+					
 					try {
 						clientSocket = serverSocket.accept();
+						if (!clientSocket.equals(null)) {
+							executorService.execute(new ControllerWorker(
+									clientSocket, config.getString("log.dir"), componentName));
+						}
 					} catch (IOException e) {
 						throw new RuntimeException(
 								"Error accepting client connection", e);
 					}
-					executorService.execute(new ControllerWorker(clientSocket));
 				}
 
 			}
@@ -152,7 +141,6 @@ public class Node implements INodeCli, Runnable {
 	private void createTCPSocket() {
 		try {
 			serverSocket = new ServerSocket(config.getInt("tcp.port"));
-			System.out.println("serverSocket created.");
 		}	catch (IOException e) {
 			throw new RuntimeException("Cannot listen on TCP port.", e);
 		}
@@ -164,12 +152,7 @@ public class Node implements INodeCli, Runnable {
 	public String exit() throws IOException {
 		executorService.shutdownNow();
 		timer.cancel();
-		if (serverSocket != null)
-			try {
-				serverSocket.close();
-			} catch (IOException e) {
-				// Ignored because we cannot handle it
-			}
+		if (serverSocket != null) serverSocket.close();
 		if (datagramSocket != null) datagramSocket.close();
 		return null;
 	}

@@ -8,17 +8,21 @@ public class NodeSet {
 
 	private Set<Node> nodes = new HashSet<Node>();
 
+
 	public NodeSet() {
 
 	}
-
-	public boolean add(Node node) {
+	
+	public boolean alreadyIn(String signature) {
 		for (Node element : nodes) {
-			if (node.signature().equals(element.signature()))
+			if (signature.equals(element.getSignature()))
 				return false;
 		}
-		nodes.add(node);
 		return true;
+	}
+	
+	public void add(Node node) {
+		nodes.add(node);
 	}
 
 //	public Set<Node> getSet() {
@@ -33,11 +37,22 @@ public class NodeSet {
 	public Set<Node> getSet() {
 		return nodes;
 	}
+	
+	public String getOperators() {
+		String operators = "";
+		for(Node element : nodes) {
+			if(element.isOnline()) {
+				operators += element.getOperators();
+			}
+		}
+		return operators;
+	}
 
 	public void checkStatus(Map<String, Long> lastpacket) {
 		for (Node element : nodes) {
 			element.checkStatus(lastpacket);
 		}
+		
 	}
 
 }

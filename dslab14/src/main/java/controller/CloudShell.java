@@ -13,7 +13,7 @@ import cli.Shell;
 
 /**
  * @author David
- *
+ * 
  */
 public class CloudShell {
 
@@ -23,8 +23,7 @@ public class CloudShell {
 
 	public CloudShell(String componentName, HashMap<String, User> users,
 			InputStream userRequestStream, OutputStream userResponseStream) {
-		
-		
+
 		/*
 		 * First, create a new Shell instance and provide the name of the
 		 * component, an InputStream as well as an OutputStream. If you want to
@@ -54,47 +53,39 @@ public class CloudShell {
 		System.out.println(getClass().getName()
 				+ " up and waiting for commands!");
 	}
-	
+
 	// gibt Lister der User aus
 	@Command
 	public String users() {
-
 		try {
 			System.out.println(cloudcontroller.users());
 		} catch (IOException e) {
 			System.out.println("couldn`t print users!");
 		}
-
 		return this.loggedInUser;
-
 	}
-	
+
 	// gibt Liste der Nodes aus
 	@Command
 	public String nodes() {
-
 		try {
 			System.out.println(cloudcontroller.nodes());
 		} catch (IOException e) {
 			System.out.println("couldn`t print nodes!");
 		}
-
 		return this.loggedInUser;
-
 	}
-	
+
 	// beendet den Cloudcontroller
 	@Command
 	public String exit() {
 		// Afterwards stop the Shell from listening for commands
 		shell.close();
 		try {
-			cloudcontroller.exit();
+			return cloudcontroller.exit();
 		} catch (IOException e) {
-			System.out.println("couldn't log out!");
-			e.printStackTrace();
+			return "couldn't log out!";
 		}
-		return "Shut down completed! Bye ..";
 	}
 
 	public void register(CloudController mainclass) {

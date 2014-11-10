@@ -10,7 +10,7 @@ package controller;
 public class User {
 	private String name = "";
 	private String password = "";
-	private int credits;
+	private long credits;
 	private boolean loggedin = false;
 	
 	public boolean isLoggedin() {
@@ -26,16 +26,12 @@ public class User {
 		return password;
 	}
 
-	public void setPassword(String password) {
-		this.password = password;
-	}
-
-	public int getCredits() {
+	public long getCredits() {
 		return credits;
 	}
 
-	public void setCredits(int credits) {
-		this.credits = credits;
+	public synchronized void setCredits(long amount) {
+		this.credits = amount;
 	}
 
 	public User(String name, String password) {
@@ -50,6 +46,10 @@ public class User {
 
 	public String getName() {
 		return name;		
+	}
+
+	public synchronized void addCredits(long amount) {
+		this.credits += amount;
 	}
 	
 	

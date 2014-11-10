@@ -73,9 +73,10 @@ public class Shell implements Runnable, Closeable {
 		try {
 			for (String line; !Thread.currentThread().isInterrupted()
 					&& (line = readLine()) != null;) {
-				write(String.format("%s\t\t%s> %s%n",
-						DATE_FORMAT.get().format(new Date()), name, line)
-						.getBytes());
+				//TODO: Test
+//				write(String.format("%s\t\t%s> %s%n",
+//						DATE_FORMAT.get().format(new Date()), name, line)
+//						.getBytes());
 				Object result;
 				try {
 					result = invoke(line);

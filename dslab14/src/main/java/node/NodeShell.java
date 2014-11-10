@@ -12,15 +12,16 @@ import cli.Shell;
 
 /**
  * @author David
- *
+ * 
  */
 public class NodeShell {
 
 	private Shell shell;
 	private Node node;
 
-	public NodeShell(String componentName, InputStream userRequestStream, OutputStream userResponseStream) {
-			
+	public NodeShell(String componentName, InputStream userRequestStream,
+			OutputStream userResponseStream) {
+
 		/*
 		 * First, create a new Shell instance and provide the name of the
 		 * component, an InputStream as well as an OutputStream. If you want to
@@ -51,18 +52,17 @@ public class NodeShell {
 				+ " up and waiting for commands!");
 	}
 
-		// beendet den Cloudcontroller
+	// beendet den Cloudcontroller
 	@Command
 	public String exit() {
 		// Afterwards stop the Shell from listening for commands
 		shell.close();
 		try {
-			node.exit();
+			return node.exit();
 		} catch (IOException e) {
-			System.out.println("couldn't log out!");
-			e.printStackTrace();
+			return "couldn't log out!";
 		}
-		return "Shut down completed! Bye ..";
+
 	}
 
 	public void register(Node mainclass) {

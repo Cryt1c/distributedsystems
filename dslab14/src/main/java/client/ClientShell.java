@@ -58,12 +58,10 @@ public class ClientShell {
 		// Afterwards stop the Shell from listening for commands
 		shell.close();
 		try {
-			client.exit();
+			return client.exit();
 		} catch (IOException e) {
-			System.out.println("couldn't log out!");
-			e.printStackTrace();
+			return "couldn't log out!";
 		}
-		return "Shut down completed! Bye ..";
 	}
 
 	@Command
@@ -73,10 +71,10 @@ public class ClientShell {
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-			return("couldn't login!");
+			return ("couldn't login!");
 		}
 	}
-	
+
 	@Command
 	public String logout() {
 		try {
@@ -84,10 +82,10 @@ public class ClientShell {
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-			return("couldn't logout!");
+			return ("couldn't logout!");
 		}
 	}
-	
+
 	@Command
 	public String credits() {
 		try {
@@ -95,10 +93,10 @@ public class ClientShell {
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-			return("couldn't lookup credits!");
+			return ("couldn't lookup credits!");
 		}
 	}
-	
+
 	@Command
 	public String list() {
 		try {
@@ -106,10 +104,10 @@ public class ClientShell {
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-			return("couldn't list operations");
+			return ("couldn't list operations");
 		}
 	}
-	
+
 	@Command
 	public String compute(String term) {
 		try {
@@ -117,7 +115,18 @@ public class ClientShell {
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-			return("couldn't compute " + term);
+			return ("couldn't compute " + term);
+		}
+	}
+
+	@Command
+	public String buy(long amount) {
+		try {
+			return client.buy(amount);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return ("couldn't buy " + amount);
 		}
 	}
 

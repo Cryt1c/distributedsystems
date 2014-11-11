@@ -41,7 +41,6 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		public void run() {
 			// check if Nodes are still alive
 			nodeSet.checkStatus(lastpacket);
-			// System.out.println("checkalive");
 		}
 
 	};
@@ -125,7 +124,6 @@ public class CloudController implements ICloudControllerCli, Runnable {
 					// nodes if needed
 					try {
 						datagramSocket.receive(packet);
-						//System.out.println("receive: " + new String(packet.getData()).trim());
 						String[] nameoperators = new String(packet.getData())
 								.split(" ");
 
@@ -133,15 +131,12 @@ public class CloudController implements ICloudControllerCli, Runnable {
 								+ nameoperators[1].trim())) {
 							
 							nodeSet.add(new Node(
-									packet.getAddress(), 500, Integer.parseInt(nameoperators[2].trim()), nameoperators[0],
+									packet.getAddress(), Integer.parseInt(nameoperators[2].trim()), nameoperators[0],
 									nameoperators[1].trim(), config
 											.getInt("node.timeout")));
 						}
 						lastpacket.put(nameoperators[0],
 								System.currentTimeMillis());
-
-						// System.out.println("packet received: "
-						// + new String(packet.getData()).trim());
 
 					} catch (IOException e) {
 						System.out.println("Error occurred while waiting for/communicating with client");
@@ -173,7 +168,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 					try {
 						clientSocket = serverSocket.accept();
 						if (!clientSocket.equals(null)) {
-							executorService.execute(new ClientWorker(
+							executorService.execute(new CloudWorker(
 									clientSocket, cloudcontroller));
 						}
 					} catch (IOException e) {
@@ -210,11 +205,10 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	// returns the users as a String
 	@Override
 	public String users() throws IOException {
-		int count = 1;
 		String result = "";
 
 		for (Map.Entry<String, User> entry : users.entrySet()) {
-			result += count++ + ". " + entry.getValue() + "\n";
+			result += entry.getValue() + "\n";
 		}
 		return result;
 	}

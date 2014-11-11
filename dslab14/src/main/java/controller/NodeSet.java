@@ -24,15 +24,6 @@ public class NodeSet {
 	public void add(Node node) {
 		nodes.add(node);
 	}
-
-//	public Set<Node> getSet() {
-//		Set<Node> copy = new HashSet<Node>();
-//		Iterator<Node> iterator = nodes.iterator();
-//		while (iterator.hasNext()) {
-//			copy.add(iterator.next().clone());
-//		}
-//		return nodes;
-//	}
 	
 	public Set<Node> getSet() {
 		return nodes;

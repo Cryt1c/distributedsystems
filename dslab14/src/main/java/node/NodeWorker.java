@@ -18,7 +18,7 @@ import java.util.Date;
  * @author David
  * 
  */
-public class ControllerWorker implements Runnable {
+public class NodeWorker implements Runnable {
 
 	private Socket socket;
 	private PrintWriter writer;
@@ -26,7 +26,7 @@ public class ControllerWorker implements Runnable {
 	private String logdir;
 	private String compName;
 
-	public ControllerWorker(Socket socket, String logdir, String name) {
+	public NodeWorker(Socket socket, String logdir, String name) {
 		this.socket = socket;
 		this.logdir = logdir;
 		this.compName = name;
@@ -59,13 +59,13 @@ public class ControllerWorker implements Runnable {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+
 		if (input != null) {
 			result = calculate(input.split(" "));
 			log(input.split(" "), result);
 			writer.println(result);
 		}
-		
+
 		try {
 			this.socket.close();
 		} catch (IOException e) {
@@ -73,13 +73,20 @@ public class ControllerWorker implements Runnable {
 			e.printStackTrace();
 		}
 	}
-	// TODO: error divide by 0 not logged
-	private synchronized void log(String[] input, String result) {
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss.SSS");
+
+    private static final ThreadLocal<SimpleDateFormat> formatter = new ThreadLocal<SimpleDateFormat>(){
+        @Override
+        protected SimpleDateFormat initialValue()
+        {
+            return new SimpleDateFormat("yyyyMMdd_HHmmss.SSS");
+        }
+    };
+	
+	private void log(String[] input, String result) {
 		Date now = new Date();
-		String date = sdf.format(now);
+		String date = formatter.get().format(now);
 		PrintWriter fileWriter = null;
-		
+
 		try {
 			File file = new File(logdir + "/" + date + "_" + compName + ".log");
 			file.getParentFile().mkdirs();
@@ -91,7 +98,7 @@ public class ControllerWorker implements Runnable {
 		fileWriter.println(input[0] + " " + input[1] + " " + input[2]);
 		fileWriter.println(result);
 		fileWriter.close();
-		
+
 	}
 
 	private String calculate(String[] calc) {
@@ -111,9 +118,10 @@ public class ControllerWorker implements Runnable {
 		} else if (calc[1].equals("*")) {
 			result = op1 * op2;
 		} else if (calc[1].equals("/")) {
-			if (op2 == 0)
+			if (op2 == 0) {
 				return "Error: Division by zero!";
-			result = (int) ((double) op1 / (double) op2);
+			}
+			result = Math.round((float) op1 / op2);
 		}
 		return "" + result;
 	}

@@ -12,10 +12,9 @@ public class Node {
 	int port;
 	int timeout;
 
-	public Node(InetAddress ip, int usage, int port, String name, String operators,
+	public Node(InetAddress ip, int port, String name, String operators,
 			int timeout) {
 		this.ip = ip;
-		this.usage = usage;
 		this.port = port;
 		this.name = name;
 		this.operators = operators;
@@ -56,7 +55,7 @@ public class Node {
 
 	@Override
 	public String toString() {
-		return "IP: " + ip + " Port: " + port
+		return name + " IP: " + ip + " Port: " + port
 				+ (online ? " online " : " offline ") + "Usage: " + usage;
 	}
 

@@ -124,7 +124,7 @@ public class Node implements INodeCli, Runnable {
 					try {
 						clientSocket = serverSocket.accept();
 						if (!clientSocket.equals(null)) {
-							executorService.execute(new ControllerWorker(
+							executorService.execute(new NodeWorker(
 									clientSocket, config.getString("log.dir"), componentName));
 						}
 					} catch (IOException e) {

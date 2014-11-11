@@ -40,80 +40,47 @@ public class Client implements IClientCli, Runnable {
 		this.config = config;
 		this.userRequestStream = userRequestStream;
 		this.userResponseStream = userResponseStream;
-
-		// TODO
 	}
 
 	@Override
 	public void run() {
-		// TODO
-		this.startShell();
 		this.createTCPSocket();
-		//this.startTCPThread();
+		this.startShell();
 	}
-	
+
 	// register this object at the shell and run the shell
 	private void startShell() {
-		this.shell = new ClientShell(componentName, userRequestStream, userResponseStream);
+		this.shell = new ClientShell(componentName, userRequestStream,
+				userResponseStream);
 		shell.register(this);
-		executorService.execute(new Runnable() {
-			public void run() {
-				Thread.currentThread().setName("shellservice");
-				shell.run();
-			}
-		});
+		shell.run();
 	}
-	
+
 	// creates a new TCP socket and waits for new incoming connections
 	private void createTCPSocket() {
 		try {
-			socket = new Socket(config.getString("controller.host"), config.getInt("controller.tcp.port"));
-			System.out.println("Socket created.");
-		}	catch (IOException e) {
+			socket = new Socket(config.getString("controller.host"),
+					config.getInt("controller.tcp.port"));
+		} catch (IOException e) {
 			System.out.println("Connection refused!");
 			return;
 		}
 		// create a writer to send messages to the server
 		try {
-			serverWriter = new PrintWriter(
-					socket.getOutputStream(), true);
+			serverWriter = new PrintWriter(socket.getOutputStream(), true);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		try {
-			serverReader = new BufferedReader(
-					new InputStreamReader(socket.getInputStream()));
+			serverReader = new BufferedReader(new InputStreamReader(
+					socket.getInputStream()));
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
-
 	}
 
-	//TODO: delete
-//	// start tcpservice-Thread
-//	private void startTCPThread() {
-//		executorService.execute(new Runnable() {
-//			public void run() {
-//				Thread.currentThread().setName("tcpservice");
-//
-//				while (true) {
-//					Socket clientSocket = null;
-//					try {
-//						clientSocket = socket.accept();
-//					} catch (IOException e) {
-//						throw new RuntimeException(
-//								"Error accepting client connection", e);
-//					}
-//					executorService.execute(new ClientWorker(clientSocket));
-//				}
-//
-//			}
-//		});
-//	}
-	
 	@Override
 	public String login(String username, String password) throws IOException {
 		serverWriter.println("login " + username + " " + password);
@@ -153,7 +120,7 @@ public class Client implements IClientCli, Runnable {
 	@Override
 	public String exit() throws IOException {
 		executorService.shutdownNow();
-		if(socket != null) {
+		if (socket != null) {
 			socket.close();
 		}
 		return "client shutdown";

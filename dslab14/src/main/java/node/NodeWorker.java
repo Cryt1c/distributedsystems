@@ -68,8 +68,9 @@ public class NodeWorker implements Runnable {
 
 		try {
 			this.socket.close();
+			System.out.println("NodeWorker: Socket closed");
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
+			System.out.println("Error closing Socket");
 			e.printStackTrace();
 		}
 	}

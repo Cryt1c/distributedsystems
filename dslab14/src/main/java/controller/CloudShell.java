@@ -84,7 +84,7 @@ public class CloudShell {
 		try {
 			return cloudcontroller.exit();
 		} catch (IOException e) {
-			return "couldn't log out!";
+			return "CloudController: couldn't close!";
 		}
 	}
 

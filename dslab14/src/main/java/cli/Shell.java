@@ -73,21 +73,13 @@ public class Shell implements Runnable, Closeable {
 		try {
 			for (String line; !Thread.currentThread().isInterrupted()
 					&& (line = readLine()) != null;) {
-				//TODO: Test
-//				write(String.format("%s\t\t%s> %s%n",
-//						DATE_FORMAT.get().format(new Date()), name, line)
-//						.getBytes());
+				write(String.format("%s\t\t%s> %s%n",
+						DATE_FORMAT.get().format(new Date()), name, line)
+						.getBytes());
 				Object result;
 				try {
 					result = invoke(line);
-
-				
-				} 
-				// TODO: Test
-				catch (IllegalArgumentException e) {
-					result = "Unkown Command!";
-				}
-				catch (Throwable throwable) {
+				} catch (Throwable throwable) {
 					ByteArrayOutputStream str = new ByteArrayOutputStream(1024);
 					throwable.printStackTrace(new PrintStream(str, true));
 					result = str.toString();

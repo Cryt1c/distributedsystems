@@ -22,9 +22,11 @@ public class CloudWorker implements Runnable {
 	private BufferedReader reader;
 	private User user;
 	private NodeSet nodeset;
+	private Socket socket;
 
 	public CloudWorker(Socket socket, CloudController mainclass) {
 		this.cloudController = mainclass;
+		this.socket = socket;
 		Thread.currentThread().setName("clientworker");
 		try {
 			reader = new BufferedReader(new InputStreamReader(
@@ -59,7 +61,7 @@ public class CloudWorker implements Runnable {
 										.getPassword().equals(input[2])) {
 							this.user = cloudController.getUsers()
 									.get(input[1]).setLoggedin(true);
-							writer.println("success");
+							writer.println("successfully logged in!");
 						} else {
 							writer.println("wrong credentials!");
 						}
@@ -96,12 +98,18 @@ public class CloudWorker implements Runnable {
 					}
 
 				}
-			} catch (IOException e) {
+			} catch (Exception e) {
 				user.setLoggedin(false);
-				System.out
-						.println("Error occurred while waiting for/communicating with client: "
-								+ user.getName());
-				break;
+				try {
+					socket.close();
+					System.out.println("CloudWorker: clientSocket closed: "
+							+ user.getName());
+					return;
+				} catch (IOException e1) {
+					System.out.println("Error closing Socket");
+					e.printStackTrace();
+				}
+
 			}
 		}
 	}
@@ -110,16 +118,15 @@ public class CloudWorker implements Runnable {
 		int credits = 0;
 		nodeset = this.cloudController.getNodeSet();
 
-		if (this.user.getCredits() < credits) {
-			this.writer.println("Error: You don't have enough Credits!");
+		// checks if user has enough credits left, returns error if not
+		if (this.user.getCredits() < (input.length - 2) * 25) {
+			this.writer
+					.println("Error: You won't have enough credits for this calculation!");
 			return;
 		}
 
 		for (int i = 0; i < input.length; i++) {
-			if (this.user.getCredits() <= credits) {
-				this.writer.println("Error: You don't have enough Credits!");
-				break;
-			}
+
 			if (input[i].equals("+")) {
 				input[i + 1] = sendCalculation(nodeLookUp("+"),
 						Arrays.copyOfRange(input, i - 1, i + 2));

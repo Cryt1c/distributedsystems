@@ -119,7 +119,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 				while (true) {
 					byte[] buf = new byte[256];
 					DatagramPacket packet = new DatagramPacket(buf, buf.length);
-					
+
 					// receive the packet, extracts the data and creates new
 					// nodes if needed
 					try {
@@ -129,17 +129,19 @@ public class CloudController implements ICloudControllerCli, Runnable {
 
 						if (nodeSet.alreadyIn(nameoperators[0] + " "
 								+ nameoperators[1].trim())) {
-							
-							nodeSet.add(new Node(
-									packet.getAddress(), Integer.parseInt(nameoperators[2].trim()), nameoperators[0],
-									nameoperators[1].trim(), config
-											.getInt("node.timeout")));
+
+							nodeSet.add(new Node(packet.getAddress(), Integer
+									.parseInt(nameoperators[2].trim()),
+									nameoperators[0], nameoperators[1].trim(),
+									config.getInt("node.timeout")));
 						}
 						lastpacket.put(nameoperators[0],
 								System.currentTimeMillis());
 
 					} catch (IOException e) {
-						System.out.println("Error occurred while waiting for/communicating with client");
+						datagramSocket.close();
+						System.out
+								.println("CloudController: datagramSocket closed");
 						break;
 					}
 				}
@@ -162,7 +164,6 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		executorService.execute(new Runnable() {
 			public void run() {
 				Thread.currentThread().setName("tcpservice");
-
 				while (true) {
 					Socket clientSocket = null;
 					try {
@@ -172,11 +173,17 @@ public class CloudController implements ICloudControllerCli, Runnable {
 									clientSocket, cloudcontroller));
 						}
 					} catch (IOException e) {
-						System.out.println("Error occurred while waiting for/communicating with client");
-						break;
+						try {
+							serverSocket.close();
+							System.out
+									.println("CloudController: serverSocket closed");
+							break;
+						} catch (IOException e1) {
+							System.out.println("Error closing Socket");
+							e1.printStackTrace();
+						}
 					}
 				}
-
 			}
 		});
 	}
@@ -218,11 +225,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		executorService.shutdownNow();
 		timer.cancel();
 		if (serverSocket != null)
-			try {
-				serverSocket.close();
-			} catch (IOException e) {
-				// Ignored because we cannot handle it
-			}
+			serverSocket.close();
 		if (datagramSocket != null)
 			datagramSocket.close();
 		return "cloudcontroller shutdown";

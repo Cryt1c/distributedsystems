@@ -10,6 +10,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
@@ -30,6 +32,7 @@ public class Node implements INodeCli, Runnable {
 	private ExecutorService executorService = Executors.newFixedThreadPool(10);
 	private NodeShell shell;
 	private DatagramPacket packet;
+	private Set<Socket> clientSockets = new HashSet<Socket>();
 
 	// Sends isAlive packet
 	TimerTask task = new TimerTask() {
@@ -108,7 +111,6 @@ public class Node implements INodeCli, Runnable {
 		try {
 			datagramSocket = new DatagramSocket();
 		} catch (SocketException e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
 	}
@@ -118,18 +120,24 @@ public class Node implements INodeCli, Runnable {
 		executorService.execute(new Runnable() {
 			public void run() {
 				Thread.currentThread().setName("tcpservice");
+				Socket clientSocket = null;
 				while(true) {
-					Socket clientSocket = null;
-					
 					try {
 						clientSocket = serverSocket.accept();
+						clientSockets.add(clientSocket);
 						if (!clientSocket.equals(null)) {
 							executorService.execute(new NodeWorker(
 									clientSocket, config.getString("log.dir"), componentName));
 						}
 					} catch (IOException e) {
-						throw new RuntimeException(
-								"Error accepting client connection", e);
+							try {
+								serverSocket.close();
+								System.out.println("Node: serverSocket closed");
+							} catch (IOException e1) {
+								System.out.println("Error closing Socket");
+								e1.printStackTrace();
+							}
+						break;
 					}
 				}
 
@@ -151,6 +159,9 @@ public class Node implements INodeCli, Runnable {
 	@Override
 	public String exit() throws IOException {
 		executorService.shutdownNow();
+		for(Socket element: clientSockets) {
+			element.close();
+		}
 		timer.cancel();
 		if (serverSocket != null) serverSocket.close();
 		if (datagramSocket != null) datagramSocket.close();

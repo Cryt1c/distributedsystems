@@ -8,8 +8,10 @@ import java.net.DatagramSocket;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -33,6 +35,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	private ExecutorService executorService = Executors.newFixedThreadPool(10);
 	private CloudShell shell;
 	private Timer timer = new Timer();
+	private List<CloudWorker> workers;
 
 	// Timer for the node.isAlive check
 	TimerTask task = new TimerTask() {
@@ -61,7 +64,6 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		this.config = config;
 		this.userRequestStream = userRequestStream;
 		this.userResponseStream = userResponseStream;
-		// TODO
 	}
 
 	@Override
@@ -115,14 +117,15 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		executorService.execute(new Runnable() {
 			public void run() {
 				Thread.currentThread().setName("udpservice");
+				try {
+					while (true) {
+						byte[] buf = new byte[256];
+						DatagramPacket packet = new DatagramPacket(buf,
+								buf.length);
 
-				while (true) {
-					byte[] buf = new byte[256];
-					DatagramPacket packet = new DatagramPacket(buf, buf.length);
+						// receive the packet, extracts the data and creates new
+						// nodes if needed
 
-					// receive the packet, extracts the data and creates new
-					// nodes if needed
-					try {
 						datagramSocket.receive(packet);
 						String[] nameoperators = new String(packet.getData())
 								.split(" ");
@@ -137,13 +140,9 @@ public class CloudController implements ICloudControllerCli, Runnable {
 						}
 						lastpacket.put(nameoperators[0],
 								System.currentTimeMillis());
-
-					} catch (IOException e) {
-						datagramSocket.close();
-						System.out
-								.println("CloudController: datagramSocket closed");
-						break;
 					}
+				} catch (IOException e) {
+					cloudcontroller.exit();
 				}
 			}
 		});
@@ -164,25 +163,21 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		executorService.execute(new Runnable() {
 			public void run() {
 				Thread.currentThread().setName("tcpservice");
-				while (true) {
-					Socket clientSocket = null;
-					try {
+				workers = new ArrayList<CloudWorker>();
+				try {
+					while (true) {
+						Socket clientSocket = null;
 						clientSocket = serverSocket.accept();
 						if (!clientSocket.equals(null)) {
-							executorService.execute(new CloudWorker(
+							System.out.println("new worker");
+							workers.add(new CloudWorker(
 									clientSocket, cloudcontroller));
-						}
-					} catch (IOException e) {
-						try {
-							serverSocket.close();
-							System.out
-									.println("CloudController: serverSocket closed");
-							break;
-						} catch (IOException e1) {
-							System.out.println("Error closing Socket");
-							e1.printStackTrace();
+							executorService.execute(workers.get(workers.size()-1));
 						}
 					}
+				} catch (IOException e) {
+					e.printStackTrace();
+					cloudcontroller.exit();
 				}
 			}
 		});
@@ -220,12 +215,25 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		return result;
 	}
 
+	// closes the sockets and cancels the timer and the executorService
 	@Override
-	public String exit() throws IOException {
+	public String exit() {
 		executorService.shutdownNow();
 		timer.cancel();
+		
 		if (serverSocket != null)
-			serverSocket.close();
+			try {
+				serverSocket.close();
+			} catch (IOException e) {
+				System.out
+						.println("CloudController: could'nt close serverSocket");
+				e.printStackTrace();
+			}
+		
+		for(CloudWorker element: workers) {
+			element.closeAll();
+		}
+		
 		if (datagramSocket != null)
 			datagramSocket.close();
 		return "cloudcontroller shutdown";

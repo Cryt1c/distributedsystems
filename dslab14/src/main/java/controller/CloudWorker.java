@@ -23,6 +23,9 @@ public class CloudWorker implements Runnable {
 	private User user;
 	private NodeSet nodeset;
 	private Socket socket;
+	private PrintWriter calcWriter;
+	private BufferedReader calcReader;
+	private Socket calcSocket;
 
 	public CloudWorker(Socket socket, CloudController mainclass) {
 		this.cloudController = mainclass;
@@ -46,13 +49,12 @@ public class CloudWorker implements Runnable {
 
 	@Override
 	public void run() {
-
-		while (true) {
-			String[] input = { "" };
-
-			try {
+		try {
+			while (!Thread.interrupted() && !socket.isClosed()) {
+				String[] input = { "" };
+				
 				input = reader.readLine().split(" ");
-
+				System.out.println(Arrays.toString(input));
 				if (this.user == null || user.isLoggedin() == false) {
 					if (input[0].equals("login")) {
 						if (this.cloudController.getUsers().containsKey(
@@ -96,22 +98,31 @@ public class CloudWorker implements Runnable {
 						writer.println("You are already logged in!");
 						break;
 					}
-
 				}
-			} catch (Exception e) {
-				user.setLoggedin(false);
-				try {
-					socket.close();
-					System.out.println("CloudWorker: clientSocket closed: "
-							+ user.getName());
-					return;
-				} catch (IOException e1) {
-					System.out.println("Error closing Socket");
-					e.printStackTrace();
-				}
-
 			}
+		} catch (Exception e) {
+			this.closeAll();
 		}
+	}
+
+	private void close() {
+		if(user != null) user.setLoggedin(false);
+		try {
+			if (writer != null)
+				writer.close();
+			if (reader != null)
+				reader.close();
+			if (socket != null && !socket.isClosed())
+				socket.close();
+			System.out.println("CloudWorker: writer, reader and socket are close: ");
+		} catch (IOException e) {
+			System.out.println("Error closing Cloudworker");
+		}
+	}
+	
+	public void closeAll() {
+		close();
+		closeCalc();
 	}
 
 	private void compute(String input[]) {
@@ -185,45 +196,29 @@ public class CloudWorker implements Runnable {
 		try {
 			calcSocket = new Socket(node.getIP(), node.getPort());
 		} catch (UnknownHostException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			return "Error: technical problems";
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			return "Error: technical problems";
 		}
 
 		if (calcSocket != null) {
-
 			try {
 				calcWriter = new PrintWriter(calcSocket.getOutputStream(), true);
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-
-			try {
 				calcReader = new BufferedReader(new InputStreamReader(
 						calcSocket.getInputStream()));
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
 
-			calcWriter.println(calc[0] + " " + calc[1] + " " + calc[2]);
+				calcWriter.println(calc[0] + " " + calc[1] + " " + calc[2]);
 
-			try {
 				result = calcReader.readLine();
-			} catch (IOException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
-
-			try {
-				calcSocket.close();
 			} catch (IOException e) {
-				System.out.println("calcSocket: connection closed");
 				e.printStackTrace();
+				this.closeCalc();
+				return "Error: technical problems";
 			}
+			
+			this.closeCalc();
 		}
 		if (!result.contains("Error")) {
 			if (result.contains("-")) {
@@ -232,5 +227,20 @@ public class CloudWorker implements Runnable {
 				node.setUsage(node.getUsage() + 50 * result.length());
 		}
 		return result;
+	}
+	
+	// closes streams and sockets to node
+	private void closeCalc() {
+		try {
+			if (calcWriter != null)
+				calcWriter.close();
+			if (calcReader != null)
+				calcReader.close();
+			if (calcSocket != null && !socket.isClosed())
+				calcSocket.close();
+			System.out.println("CloudWorker: calcWriter, calcReader, calcSocket are closed: ");
+		} catch (IOException e) {
+			System.out.println("Error closing Cloudworker");
+		}
 	}
 }

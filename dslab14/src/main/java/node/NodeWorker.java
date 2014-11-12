@@ -56,7 +56,7 @@ public class NodeWorker implements Runnable {
 			input = reader.readLine();
 
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
+			System.out.println("NodeWorker: error reading new Line");
 			e.printStackTrace();
 		}
 
@@ -65,16 +65,22 @@ public class NodeWorker implements Runnable {
 			log(input.split(" "), result);
 			writer.println(result);
 		}
-
+		this.close();
+	}
+	
+	// closes writer, reader and socket
+	private void close() {
 		try {
-			this.socket.close();
-			System.out.println("NodeWorker: Socket closed");
+			if (writer != null)this.writer.close();
+			if (reader != null)this.reader.close();
+			if (socket != null && !socket.isClosed())this.socket.close();
+			System.out.println("NodeWorker: writer, reader and socket successfully closed");
 		} catch (IOException e) {
-			System.out.println("Error closing Socket");
+			System.out.println("Error closing writer, reader or socket");
 			e.printStackTrace();
 		}
 	}
-
+	
     private static final ThreadLocal<SimpleDateFormat> formatter = new ThreadLocal<SimpleDateFormat>(){
         @Override
         protected SimpleDateFormat initialValue()

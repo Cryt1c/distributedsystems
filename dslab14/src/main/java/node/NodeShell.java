@@ -3,7 +3,6 @@
  */
 package node;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
@@ -57,12 +56,7 @@ public class NodeShell {
 	public String exit() {
 		// Afterwards stop the Shell from listening for commands
 		shell.close();
-		try {
-			return node.exit();
-		} catch (IOException e) {
-			return "couldn't log out!";
-		}
-
+		return node.exit();
 	}
 
 	public void register(Node mainclass) {

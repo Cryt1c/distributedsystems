@@ -81,11 +81,8 @@ public class CloudShell {
 	public String exit() {
 		// Afterwards stop the Shell from listening for commands
 		shell.close();
-		try {
-			return cloudcontroller.exit();
-		} catch (IOException e) {
-			return "CloudController: couldn't close!";
-		}
+		return cloudcontroller.exit();
+
 	}
 
 	public void register(CloudController mainclass) {

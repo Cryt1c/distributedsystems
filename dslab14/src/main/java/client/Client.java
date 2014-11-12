@@ -65,14 +65,9 @@ public class Client implements IClientCli, Runnable {
 			System.out.println("Connection refused!");
 			return;
 		}
-		// create a writer to send messages to the server
+		// create a writer and reader
 		try {
 			serverWriter = new PrintWriter(socket.getOutputStream(), true);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		try {
 			serverReader = new BufferedReader(new InputStreamReader(
 					socket.getInputStream()));
 		} catch (IOException e) {
@@ -120,9 +115,9 @@ public class Client implements IClientCli, Runnable {
 	@Override
 	public String exit() throws IOException {
 		executorService.shutdownNow();
-		if (socket != null) {
-			socket.close();
-		}
+		if (serverReader != null) serverReader.close();
+		if (serverWriter != null) serverWriter.close();
+		if (socket != null && !socket.isClosed()) socket.close();
 		return "client shutdown";
 	}
 

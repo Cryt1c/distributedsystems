@@ -19,7 +19,6 @@ import java.util.concurrent.Executors;
 
 import util.Config;
 
-
 public class Node implements INodeCli, Runnable {
 
 	private String componentName;
@@ -33,24 +32,19 @@ public class Node implements INodeCli, Runnable {
 	private NodeShell shell;
 	private DatagramPacket packet;
 	private Set<Socket> clientSockets = new HashSet<Socket>();
+	private Node node;
 
 	// Sends isAlive packet
 	TimerTask task = new TimerTask() {
-
 		@Override
 		public void run() {
 			try {
-				//System.out.println("sendAlive: " + new String(packet.getData()));
 				datagramSocket.send(packet);
-				//System.out.println("sendAlive");
 			} catch (IOException e) {
-				e.printStackTrace();
+				System.out.println("couldn't send isAlive");
 			}
-
 		}
-
 	};
-
 
 	/**
 	 * @param componentName
@@ -68,11 +62,14 @@ public class Node implements INodeCli, Runnable {
 		this.config = config;
 		this.userRequestStream = userRequestStream;
 		this.userResponseStream = userResponseStream;
-		String message = componentName + " " + config.getString("node.operators") + " " + config.getString("tcp.port");
+		String message = componentName + " "
+				+ config.getString("node.operators") + " "
+				+ config.getString("tcp.port");
 		byte[] buf = message.getBytes();
-		
+
 		try {
-			this.packet = new DatagramPacket(buf, buf.length, InetAddress.getByName(config.getString("controller.host")),
+			this.packet = new DatagramPacket(buf, buf.length,
+					InetAddress.getByName(config.getString("controller.host")),
 					config.getInt("controller.udp.port"));
 		} catch (UnknownHostException e) {
 			// TODO Auto-generated catch block
@@ -82,6 +79,7 @@ public class Node implements INodeCli, Runnable {
 
 	@Override
 	public void run() {
+		node = this;
 		startShell();
 		createTCPSocket();
 		startTCPThread();
@@ -91,8 +89,9 @@ public class Node implements INodeCli, Runnable {
 
 	// register this object at the shell and run the shell
 	private void startShell() {
-		this.shell = new NodeShell(componentName, userRequestStream, userResponseStream);
-		shell.register(this);
+		this.shell = new NodeShell(componentName, userRequestStream,
+				userResponseStream);
+		shell.register(node);
 		executorService.execute(new Runnable() {
 			public void run() {
 				Thread.currentThread().setName("shellservice");
@@ -103,7 +102,8 @@ public class Node implements INodeCli, Runnable {
 
 	// starts UDP-Thread
 	private void sendIsAlive() {
-		timer.schedule(task, config.getInt("node.alive"), config.getInt("node.alive"));
+		timer.schedule(task, config.getInt("node.alive"),
+				config.getInt("node.alive"));
 	}
 
 	// creates a new UDP socket and waits for new incoming connections
@@ -121,26 +121,19 @@ public class Node implements INodeCli, Runnable {
 			public void run() {
 				Thread.currentThread().setName("tcpservice");
 				Socket clientSocket = null;
-				while(true) {
-					try {
+				try {
+					while (true) {
 						clientSocket = serverSocket.accept();
 						clientSockets.add(clientSocket);
 						if (!clientSocket.equals(null)) {
 							executorService.execute(new NodeWorker(
-									clientSocket, config.getString("log.dir"), componentName));
+									clientSocket, config.getString("log.dir"),
+									componentName));
 						}
-					} catch (IOException e) {
-							try {
-								serverSocket.close();
-								System.out.println("Node: serverSocket closed");
-							} catch (IOException e1) {
-								System.out.println("Error closing Socket");
-								e1.printStackTrace();
-							}
-						break;
 					}
+				} catch (IOException e) {
+					node.exit();
 				}
-
 			}
 		});
 	}
@@ -149,22 +142,27 @@ public class Node implements INodeCli, Runnable {
 	private void createTCPSocket() {
 		try {
 			serverSocket = new ServerSocket(config.getInt("tcp.port"));
-		}	catch (IOException e) {
+		} catch (IOException e) {
 			throw new RuntimeException("Cannot listen on TCP port.", e);
 		}
 	}
-	
-	
 
 	@Override
-	public String exit() throws IOException {
+	public String exit() {
 		executorService.shutdownNow();
-		for(Socket element: clientSockets) {
+		try {
+		for (Socket element : clientSockets) {
 			element.close();
 		}
 		timer.cancel();
-		if (serverSocket != null) serverSocket.close();
-		if (datagramSocket != null) datagramSocket.close();
+		if (serverSocket != null)
+			serverSocket.close();
+		} catch (IOException e) {
+			System.out.println("Node: couldn't close serverSocket");
+			e.printStackTrace();
+		}
+		if (datagramSocket != null)
+			datagramSocket.close();
 		return null;
 	}
 

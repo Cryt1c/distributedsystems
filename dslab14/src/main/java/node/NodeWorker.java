@@ -74,7 +74,6 @@ public class NodeWorker implements Runnable {
 			if (writer != null)this.writer.close();
 			if (reader != null)this.reader.close();
 			if (socket != null && !socket.isClosed())this.socket.close();
-			System.out.println("NodeWorker: writer, reader and socket successfully closed");
 		} catch (IOException e) {
 			System.out.println("Error closing writer, reader or socket");
 			e.printStackTrace();
@@ -126,7 +125,7 @@ public class NodeWorker implements Runnable {
 			result = op1 * op2;
 		} else if (calc[1].equals("/")) {
 			if (op2 == 0) {
-				return "Error: Division by zero!";
+				return "Error: division by 0";
 			}
 			result = Math.round((float) op1 / op2);
 		}

@@ -26,8 +26,10 @@ public class CloudWorker implements Runnable {
 	private PrintWriter calcWriter;
 	private BufferedReader calcReader;
 	private Socket calcSocket;
+	private boolean closed = true;
 
 	public CloudWorker(Socket socket, CloudController mainclass) {
+		this.closed = false;
 		this.cloudController = mainclass;
 		this.socket = socket;
 		Thread.currentThread().setName("clientworker");
@@ -52,9 +54,8 @@ public class CloudWorker implements Runnable {
 		try {
 			while (!Thread.interrupted() && !socket.isClosed()) {
 				String[] input = { "" };
-				
 				input = reader.readLine().split(" ");
-				System.out.println(Arrays.toString(input));
+
 				if (this.user == null || user.isLoggedin() == false) {
 					if (input[0].equals("login")) {
 						if (this.cloudController.getUsers().containsKey(
@@ -106,7 +107,8 @@ public class CloudWorker implements Runnable {
 	}
 
 	private void close() {
-		if(user != null) user.setLoggedin(false);
+		if (user != null)
+			user.setLoggedin(false);
 		try {
 			if (writer != null)
 				writer.close();
@@ -114,15 +116,17 @@ public class CloudWorker implements Runnable {
 				reader.close();
 			if (socket != null && !socket.isClosed())
 				socket.close();
-			System.out.println("CloudWorker: writer, reader and socket are close: ");
 		} catch (IOException e) {
 			System.out.println("Error closing Cloudworker");
 		}
 	}
-	
+
 	public void closeAll() {
-		close();
-		closeCalc();
+		if (!this.closed) {
+			this.closed = true;
+			close();
+			closeCalc();
+		}
 	}
 
 	private void compute(String input[]) {
@@ -135,33 +139,45 @@ public class CloudWorker implements Runnable {
 					.println("Error: You won't have enough credits for this calculation!");
 			return;
 		}
-
+		for(int i = 2; i < input.length; i = i + 2) {
+			if(!nodeset.getOperators().contains(input[i])) {
+				this.writer.println("Error: no node for this calculation");
+				return;
+			}
+		}
+		
 		for (int i = 0; i < input.length; i++) {
-
+			String temp = "";
 			if (input[i].equals("+")) {
-				input[i + 1] = sendCalculation(nodeLookUp("+"),
+				temp = sendCalculation(nodeLookUp("+"),
 						Arrays.copyOfRange(input, i - 1, i + 2));
+				input[i + 1] = temp;
 				credits += 50;
 			} else if (input[i].equals("-")) {
-				input[i + 1] = sendCalculation(nodeLookUp("-"),
+				temp = sendCalculation(nodeLookUp("-"),
 						Arrays.copyOfRange(input, i - 1, i + 2));
+				input[i + 1] = temp;
 				credits += 50;
 			} else if (input[i].equals("*")) {
-				input[i + 1] = sendCalculation(nodeLookUp("*"),
+				temp = sendCalculation(nodeLookUp("*"),
 						Arrays.copyOfRange(input, i - 1, i + 2));
+				input[i + 1] = temp;
 				credits += 50;
 			} else if (input[i].equals("/")) {
-				String temp = sendCalculation(nodeLookUp("/"),
+				temp = sendCalculation(nodeLookUp("/"),
 						Arrays.copyOfRange(input, i - 1, i + 2));
-				if (!temp.contains("Error: No"))
-					credits += 50;
-				if (temp.contains("Error")) {
+				input[i + 1] = temp;
+				credits += 50;
+				if (temp.contains("Error: division by 0")) {
 					this.writer.println(temp);
 					break;
 				}
-				input[i + 1] = temp;
+			} 
+			if (temp.contains("Error")) {
+				this.writer.println(temp);
+				break;
 			}
-
+			
 			else if (i == input.length - 1) {
 				this.writer.println(input[i]);
 			}
@@ -183,26 +199,22 @@ public class CloudWorker implements Runnable {
 		return returnNode;
 	}
 
+
 	private String sendCalculation(Node node, String[] calc) {
-		Socket calcSocket = null;
-		PrintWriter calcWriter = null;
-		BufferedReader calcReader = null;
-		String result = "Error: No result";
+		String result = "Error: no result";
 
 		if (node == null) {
-			return "Error: No node for this calculation";
+			return "Error: no node for this calculation";
 		}
-
+		
 		try {
 			calcSocket = new Socket(node.getIP(), node.getPort());
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
-			return "Error: technical problems";
-		} catch (IOException e) {
-			e.printStackTrace();
+		}
+		catch (Exception e) {
+			this.closeCalc();
 			return "Error: technical problems";
 		}
-
+		
 		if (calcSocket != null) {
 			try {
 				calcWriter = new PrintWriter(calcSocket.getOutputStream(), true);
@@ -217,9 +229,8 @@ public class CloudWorker implements Runnable {
 				this.closeCalc();
 				return "Error: technical problems";
 			}
-			
-			this.closeCalc();
 		}
+		this.closeCalc();
 		if (!result.contains("Error")) {
 			if (result.contains("-")) {
 				node.setUsage(node.getUsage() + 50 * (result.length() - 1));
@@ -228,7 +239,7 @@ public class CloudWorker implements Runnable {
 		}
 		return result;
 	}
-	
+
 	// closes streams and sockets to node
 	private void closeCalc() {
 		try {
@@ -238,7 +249,6 @@ public class CloudWorker implements Runnable {
 				calcReader.close();
 			if (calcSocket != null && !socket.isClosed())
 				calcSocket.close();
-			System.out.println("CloudWorker: calcWriter, calcReader, calcSocket are closed: ");
 		} catch (IOException e) {
 			System.out.println("Error closing Cloudworker");
 		}

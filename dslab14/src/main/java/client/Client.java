@@ -113,11 +113,18 @@ public class Client implements IClientCli, Runnable {
 	}
 
 	@Override
-	public String exit() throws IOException {
+	public String exit() {
 		executorService.shutdownNow();
-		if (serverReader != null) serverReader.close();
-		if (serverWriter != null) serverWriter.close();
-		if (socket != null && !socket.isClosed()) socket.close();
+		try {
+			if (serverReader != null)
+				serverReader.close();
+			if (serverWriter != null)
+				serverWriter.close();
+			if (socket != null && !socket.isClosed())
+				socket.close();
+		} catch (IOException e) {
+			return "could'nt close reader, writer and socket";
+		}
 		return "client shutdown";
 	}
 

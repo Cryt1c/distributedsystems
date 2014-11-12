@@ -57,11 +57,7 @@ public class ClientShell {
 	public String exit() {
 		// Afterwards stop the Shell from listening for commands
 		shell.close();
-		try {
-			return client.exit();
-		} catch (IOException e) {
-			return "couldn't log out!";
-		}
+		return client.exit();
 	}
 
 	@Command
@@ -69,8 +65,7 @@ public class ClientShell {
 		try {
 			return client.login(username, password);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			client.exit();
 			return ("couldn't login!");
 		}
 	}
@@ -80,8 +75,7 @@ public class ClientShell {
 		try {
 			return client.logout();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			client.exit();
 			return ("couldn't logout!");
 		}
 	}
@@ -91,8 +85,7 @@ public class ClientShell {
 		try {
 			return client.credits();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			client.exit();
 			return ("couldn't lookup credits!");
 		}
 	}
@@ -102,8 +95,7 @@ public class ClientShell {
 		try {
 			return client.list();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			client.exit();
 			return ("couldn't list operations");
 		}
 	}
@@ -113,8 +105,7 @@ public class ClientShell {
 		try {
 			return client.compute(term);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			client.exit();
 			return ("couldn't compute " + term);
 		}
 	}
@@ -124,8 +115,7 @@ public class ClientShell {
 		try {
 			return client.buy(amount);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			client.exit();
 			return ("couldn't buy " + amount);
 		}
 	}

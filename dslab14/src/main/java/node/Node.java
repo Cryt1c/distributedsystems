@@ -163,7 +163,7 @@ public class Node implements INodeCli, Runnable {
 		}
 		if (datagramSocket != null)
 			datagramSocket.close();
-		return null;
+		return "node shutdown";
 	}
 
 	@Override

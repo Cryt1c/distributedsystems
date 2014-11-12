@@ -36,6 +36,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	private CloudShell shell;
 	private Timer timer = new Timer();
 	private List<CloudWorker> workers;
+	private boolean closed = true;
 
 	// Timer for the node.isAlive check
 	TimerTask task = new TimerTask() {
@@ -75,6 +76,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		startTCPThread();
 		createUDPSocket();
 		checkIsAlive();
+		this.closed = false;
 
 	}
 
@@ -118,7 +120,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 			public void run() {
 				Thread.currentThread().setName("udpservice");
 				try {
-					while (true) {
+					while (!datagramSocket.isClosed()) {
 						byte[] buf = new byte[256];
 						DatagramPacket packet = new DatagramPacket(buf,
 								buf.length);
@@ -165,18 +167,16 @@ public class CloudController implements ICloudControllerCli, Runnable {
 				Thread.currentThread().setName("tcpservice");
 				workers = new ArrayList<CloudWorker>();
 				try {
-					while (true) {
+					while (!serverSocket.isClosed()) {
 						Socket clientSocket = null;
 						clientSocket = serverSocket.accept();
 						if (!clientSocket.equals(null)) {
-							System.out.println("new worker");
-							workers.add(new CloudWorker(
-									clientSocket, cloudcontroller));
-							executorService.execute(workers.get(workers.size()-1));
+							workers.add(new CloudWorker(clientSocket,
+									cloudcontroller));
+							executorService.execute(workers.get(workers.size() - 1));
 						}
 					}
 				} catch (IOException e) {
-					e.printStackTrace();
 					cloudcontroller.exit();
 				}
 			}
@@ -218,24 +218,28 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	// closes the sockets and cancels the timer and the executorService
 	@Override
 	public String exit() {
-		executorService.shutdownNow();
-		timer.cancel();
-		
-		if (serverSocket != null)
-			try {
-				serverSocket.close();
-			} catch (IOException e) {
-				System.out
-						.println("CloudController: could'nt close serverSocket");
-				e.printStackTrace();
+		if (!this.closed) {
+			this.closed = true;
+			executorService.shutdownNow();
+			timer.cancel();
+
+			if (serverSocket != null)
+				try {
+					serverSocket.close();
+				} catch (IOException e) {
+					System.out
+							.println("CloudController: could'nt close serverSocket");
+					e.printStackTrace();
+				}
+
+			for (CloudWorker element : workers) {
+				element.closeAll();
 			}
-		
-		for(CloudWorker element: workers) {
-			element.closeAll();
+
+			if (datagramSocket != null)
+				datagramSocket.close();
+			
 		}
-		
-		if (datagramSocket != null)
-			datagramSocket.close();
 		return "cloudcontroller shutdown";
 	}
 

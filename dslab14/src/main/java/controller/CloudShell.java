@@ -18,7 +18,6 @@ import cli.Shell;
 public class CloudShell {
 
 	private Shell shell;
-	private String loggedInUser = null;
 	private CloudController cloudcontroller;
 
 	public CloudShell(String componentName, HashMap<String, User> users,
@@ -58,22 +57,20 @@ public class CloudShell {
 	@Command
 	public String users() {
 		try {
-			System.out.println(cloudcontroller.users());
+			return cloudcontroller.users();
 		} catch (IOException e) {
-			System.out.println("couldn`t print users!");
+			return "couldn`t print users!";
 		}
-		return this.loggedInUser;
 	}
 
 	// gibt Liste der Nodes aus
 	@Command
 	public String nodes() {
 		try {
-			System.out.println(cloudcontroller.nodes());
+			return cloudcontroller.nodes();
 		} catch (IOException e) {
-			System.out.println("couldn`t print nodes!");
+			return "couldn`t print nodes!";
 		}
-		return this.loggedInUser;
 	}
 
 	// beendet den Cloudcontroller

@@ -190,7 +190,7 @@ public class CloudWorker implements Runnable {
 		Node returnNode = null;
 		for (Node element : nodeset.getSet()) {
 			if (element.getOperators().contains(operator)
-					&& element.getUsage() < usage) {
+					&& element.getUsage() < usage && element.isOnline()) {
 				usage = element.getUsage();
 				returnNode = element;
 			}

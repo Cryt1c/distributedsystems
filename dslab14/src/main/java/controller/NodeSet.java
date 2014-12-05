@@ -38,6 +38,16 @@ public class NodeSet {
 		}
 		return operators;
 	}
+	
+	public String getIPPort() {
+		String ipport = "";
+		for(Node element : nodes) {
+			if(element.isOnline()) {
+				ipport += element.getIP() + "" + element.getPort() + "\n";
+			}
+		}
+		return ipport;
+	}
 
 	public void checkStatus(Map<String, Long> lastpacket) {
 		for (Node element : nodes) {

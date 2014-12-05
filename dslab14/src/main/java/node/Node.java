@@ -17,6 +17,8 @@ import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import controller.CloudWorker;
+
 import util.Config;
 
 public class Node implements INodeCli, Runnable {
@@ -102,8 +104,10 @@ public class Node implements INodeCli, Runnable {
 
 	// starts UDP-Thread
 	private void sendIsAlive() {
-		timer.schedule(task, config.getInt("node.alive"),
-				config.getInt("node.alive"));
+		if (twoPhaseCommit()) {
+			timer.schedule(task, config.getInt("node.alive"),
+					config.getInt("node.alive"));
+		}
 	}
 
 	// creates a new UDP socket and waits for new incoming connections
@@ -151,12 +155,12 @@ public class Node implements INodeCli, Runnable {
 	public String exit() {
 		executorService.shutdownNow();
 		try {
-		for (Socket element : clientSockets) {
-			element.close();
-		}
-		timer.cancel();
-		if (serverSocket != null)
-			serverSocket.close();
+			for (Socket element : clientSockets) {
+				element.close();
+			}
+			timer.cancel();
+			if (serverSocket != null)
+				serverSocket.close();
 		} catch (IOException e) {
 			System.out.println("Node: couldn't close serverSocket");
 			e.printStackTrace();
@@ -191,6 +195,68 @@ public class Node implements INodeCli, Runnable {
 	public String resources() throws IOException {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	private boolean twoPhaseCommit() {
+		String message = "!hello";
+		byte[] buf = message.getBytes();
+		DatagramPacket commit = null;
+
+		try {
+			commit = new DatagramPacket(buf, buf.length,
+					InetAddress.getByName(config.getString("controller.host")),
+					config.getInt("controller.udp.port"));
+		} catch (UnknownHostException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+
+		try {
+			datagramSocket.send(commit);
+		} catch (IOException e) {
+			System.out.println("couldn't send !hello");
+		}
+
+		try {
+			datagramSocket.receive(commit);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		message = new String(commit.getData(), packet.getOffset(),
+				packet.getLength());
+
+		String[] info = message.split("\n");
+		int rmax = Integer.getInteger(info[info.length - 1]);
+		String[] test = new String[info.length - 2];
+
+		if (info.length - 2 == 0) {
+			return true;
+		}
+
+		int average = rmax / (info.length - 2);
+
+		message = "!share " + average;
+		
+		// TODO figure out how to get if all nodes are accepting the share offer
+		for (int i = 0; i < test.length; i++) {
+			String IP = test[i].split(" ")[0];
+			int port = Integer.getInteger(test[i].split(" ")[1]);
+			try {
+				Socket clientSocket = new Socket(IP, port);
+				executorService.execute(new CommitWorker(message, clientSocket));
+			} catch (UnknownHostException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+		}
+
+		return false;
 	}
 
 }

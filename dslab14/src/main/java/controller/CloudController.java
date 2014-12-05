@@ -5,9 +5,11 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -37,6 +39,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	private Timer timer = new Timer();
 	private List<CloudWorker> workers;
 	private boolean closed = true;
+	private int rmax;
 
 	// Timer for the node.isAlive check
 	TimerTask task = new TimerTask() {
@@ -97,6 +100,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 			}
 
 		}
+		rmax = config.getInt("controller.rmax");
 	}
 
 	// register this object at the shell and run the shell
@@ -131,17 +135,22 @@ public class CloudController implements ICloudControllerCli, Runnable {
 						datagramSocket.receive(packet);
 						String[] nameoperators = new String(packet.getData())
 								.split(" ");
+						
+						if (nameoperators[0].contains("!hello")) {
+							twoPhaseCommit(packet);
+						} else {
+							if (nodeSet.alreadyIn(nameoperators[0] + " "
+									+ nameoperators[1].trim())) {
 
-						if (nodeSet.alreadyIn(nameoperators[0] + " "
-								+ nameoperators[1].trim())) {
-
-							nodeSet.add(new Node(packet.getAddress(), Integer
-									.parseInt(nameoperators[2].trim()),
-									nameoperators[0], nameoperators[1].trim(),
-									config.getInt("node.timeout")));
+								nodeSet.add(new Node(packet.getAddress(),
+										Integer.parseInt(nameoperators[2]
+												.trim()), nameoperators[0],
+										nameoperators[1].trim(), config
+												.getInt("node.timeout")));
+							}
+							lastpacket.put(nameoperators[0],
+									System.currentTimeMillis());
 						}
-						lastpacket.put(nameoperators[0],
-								System.currentTimeMillis());
 					}
 				} catch (IOException e) {
 					cloudcontroller.exit();
@@ -238,7 +247,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 
 			if (datagramSocket != null)
 				datagramSocket.close();
-			
+
 		}
 		return "cloudcontroller shutdown";
 	}
@@ -249,6 +258,22 @@ public class CloudController implements ICloudControllerCli, Runnable {
 
 	public NodeSet getNodeSet() {
 		return nodeSet;
+	}
+
+	private void twoPhaseCommit(DatagramPacket commit) {
+		String message = nodeSet.getIPPort() + rmax;
+		System.out.println(message);
+		
+		byte[] buf = message.getBytes();
+
+		commit = new DatagramPacket(buf, buf.length, commit.getSocketAddress());
+
+		try {
+			datagramSocket.send(commit);
+		} catch (IOException e) {
+			System.out.println("couldn't send twoPhaseCommit");
+		}
+		return;
 	}
 
 	/**

@@ -133,22 +133,22 @@ public class CloudController implements ICloudControllerCli, Runnable {
 						// nodes if needed
 
 						datagramSocket.receive(packet);
-						String[] nameoperators = new String(packet.getData())
+						String[] message = new String(packet.getData())
 								.split(" ");
 						
-						if (nameoperators[0].contains("!hello")) {
+						if (message[0].contains("!hello")) {
 							twoPhaseCommit(packet);
 						} else {
-							if (nodeSet.alreadyIn(nameoperators[0] + " "
-									+ nameoperators[1].trim())) {
+							if (nodeSet.alreadyIn(message[0] + " "
+									+ message[1].trim())) {
 
 								nodeSet.add(new Node(packet.getAddress(),
-										Integer.parseInt(nameoperators[2]
-												.trim()), nameoperators[0],
-										nameoperators[1].trim(), config
+										Integer.parseInt(message[2]
+												.trim()), message[0],
+										message[1].trim(), config
 												.getInt("node.timeout")));
 							}
-							lastpacket.put(nameoperators[0],
+							lastpacket.put(message[0],
 									System.currentTimeMillis());
 						}
 					}
@@ -261,15 +261,17 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	}
 
 	private void twoPhaseCommit(DatagramPacket commit) {
-		String message = nodeSet.getIPPort() + rmax;
+		String message = "!init" + "\n" + nodeSet.getIPPort() + rmax;
 		System.out.println(message);
 		
 		byte[] buf = message.getBytes();
 
 		commit = new DatagramPacket(buf, buf.length, commit.getSocketAddress());
-
+		
+		
 		try {
 			datagramSocket.send(commit);
+			
 		} catch (IOException e) {
 			System.out.println("couldn't send twoPhaseCommit");
 		}

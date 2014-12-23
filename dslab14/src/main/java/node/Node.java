@@ -35,6 +35,8 @@ public class Node implements INodeCli, Runnable {
 	private DatagramPacket packet;
 	private Set<Socket> clientSockets = new HashSet<Socket>();
 	private Node node;
+	private int rmin;
+	private int rmax;
 
 	// Sends isAlive packet
 	TimerTask task = new TimerTask() {
@@ -68,6 +70,8 @@ public class Node implements INodeCli, Runnable {
 				+ config.getString("node.operators") + " "
 				+ config.getString("tcp.port");
 		byte[] buf = message.getBytes();
+
+		rmin = config.getInt("node.rmin");
 
 		try {
 			this.packet = new DatagramPacket(buf, buf.length,
@@ -193,8 +197,7 @@ public class Node implements INodeCli, Runnable {
 
 	@Override
 	public String resources() throws IOException {
-		// TODO Auto-generated method stub
-		return null;
+		return "" + rmax;
 	}
 
 	private boolean twoPhaseCommit() {
@@ -216,7 +219,18 @@ public class Node implements INodeCli, Runnable {
 		} catch (IOException e) {
 			System.out.println("couldn't send !hello");
 		}
-
+		
+		try {
+			buf = new byte[256];
+			commit = new DatagramPacket(buf, buf.length,
+					InetAddress.getByName(config.getString("controller.host")),
+					config.getInt("controller.udp.port"));
+		} catch (UnknownHostException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		
+		
 		try {
 			datagramSocket.receive(commit);
 		} catch (IOException e) {
@@ -224,28 +238,33 @@ public class Node implements INodeCli, Runnable {
 			e.printStackTrace();
 		}
 
-		message = new String(commit.getData(), packet.getOffset(),
-				packet.getLength());
+		//System.out.println(commit.getLength());
+		String temp = new String(commit.getData(), commit.getOffset(),
+				commit.getLength());
 
-		String[] info = message.split("\n");
-		int rmax = Integer.getInteger(info[info.length - 1]);
-		String[] test = new String[info.length - 2];
+		String[] info = temp.split("\n");
 
-		if (info.length - 2 == 0) {
+		rmax = Integer.parseInt(info[info.length - 1]);
+		System.out.println(rmax);
+
+		if (info.length == 2) {
 			return true;
 		}
+
+		String[] test = new String[info.length - 2];
 
 		int average = rmax / (info.length - 2);
 
 		message = "!share " + average;
-		
+
 		// TODO figure out how to get if all nodes are accepting the share offer
 		for (int i = 0; i < test.length; i++) {
 			String IP = test[i].split(" ")[0];
 			int port = Integer.getInteger(test[i].split(" ")[1]);
 			try {
 				Socket clientSocket = new Socket(IP, port);
-				executorService.execute(new CommitWorker(message, clientSocket));
+				executorService
+						.execute(new CommitWorker(message, clientSocket));
 			} catch (UnknownHostException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();

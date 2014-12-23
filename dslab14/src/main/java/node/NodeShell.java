@@ -3,6 +3,7 @@
  */
 package node;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
@@ -57,6 +58,18 @@ public class NodeShell {
 		// Afterwards stop the Shell from listening for commands
 		shell.close();
 		return node.exit();
+	}
+	
+	// Prints out the current resource level of the node
+	@Command
+	public String resources() {
+		try {
+			return node.resources();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
 	}
 
 	public void register(Node mainclass) {

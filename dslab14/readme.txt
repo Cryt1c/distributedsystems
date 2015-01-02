@@ -15,3 +15,6 @@ I could have programed the whole thing more object oriented and therefore extend
 I hope that won't be to big of a problem in the next assignment. 
 Hopefully i didn't skip anything on the assigment. :(
 I really enjoyed programming this thing. So have fun with it. :D
+
+We used the decorator-pattern for the tcp channels, as suggested in the assessment. In Client.java you 
+can turn off the Base64 Encoding by setting the variable useBase64 to false.

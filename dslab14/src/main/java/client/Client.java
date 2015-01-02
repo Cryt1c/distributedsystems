@@ -19,7 +19,7 @@ public class Client implements IClientCli, Runnable {
 
 	// if true: use Base64Channel if true
 	// if false: use TCP Channel as before
-	private Boolean useBase64=true;
+	private Boolean useBase64=false; 
 	private String componentName;
 	private Config config;
 	private InputStream userRequestStream;

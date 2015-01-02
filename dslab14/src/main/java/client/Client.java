@@ -19,7 +19,7 @@ public class Client implements IClientCli, Runnable {
 
 	// if true: use Base64Channel if true
 	// if false: use TCP Channel as before
-	private Boolean useBase64=false;
+	private Boolean useBase64=true;
 	private String componentName;
 	private Config config;
 	private InputStream userRequestStream;
@@ -74,7 +74,8 @@ public class Client implements IClientCli, Runnable {
 		
 		try {
 			this.controllerChannel=(useBase64)?
-					new Base64Channel(socket):
+					new Base64Channel(socket,
+							config.getString("controller.key")):
 					new TcpChannel(socket);
 		} catch (IOException e) {
 			e.printStackTrace();

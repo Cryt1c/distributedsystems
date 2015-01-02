@@ -1,0 +1,10 @@
+*	CloudController	controller
+*	Client			alice
+*	Node			node1
+
+alice:		!authenticate alice
+>			verify("success")
+
+controller: !exit
+alice:		!exit
+node1:		!exit

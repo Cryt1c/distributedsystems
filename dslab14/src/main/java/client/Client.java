@@ -1,30 +1,40 @@
 package client;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.PrintStream;
-import java.io.PrintWriter;
 import java.net.Socket;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import javax.crypto.Cipher;
+import javax.crypto.NoSuchPaddingException;
+
+import org.bouncycastle.util.encoders.Base64;
+
+import dslab14.Base64Channel;
+import dslab14.TcpChannel;
+import dslab14.iChannel;
 import util.Config;
 
 public class Client implements IClientCli, Runnable {
 
+	// if true: use Base64Channel if true
+	// if false: use TCP Channel as before
+	private Boolean useBase64=false;
 	private String componentName;
 	private Config config;
 	private InputStream userRequestStream;
 	private PrintStream userResponseStream;
 	Socket socket = null;
-	PrintWriter serverWriter = null;
-	BufferedReader serverReader = null;
 	private ExecutorService executorService = Executors.newFixedThreadPool(10);
-	private ClientShell shell;
+	private ClientShell shell;	
 
-	/**
+	private iChannel controllerChannel =null;
+
+	/** 
 	 * @param componentName
 	 *            the name of the component - represented in the prompt
 	 * @param config
@@ -39,12 +49,12 @@ public class Client implements IClientCli, Runnable {
 		this.componentName = componentName;
 		this.config = config;
 		this.userRequestStream = userRequestStream;
-		this.userResponseStream = userResponseStream;
+		this.userResponseStream = userResponseStream;		
 	}
 
 	@Override
 	public void run() {
-		this.createTCPSocket();
+		this.createTCPSocket();		
 		this.startShell();
 	}
 
@@ -65,65 +75,64 @@ public class Client implements IClientCli, Runnable {
 			System.out.println("Connection refused!");
 			return;
 		}
-		// create a writer and reader
+		
 		try {
-			serverWriter = new PrintWriter(socket.getOutputStream(), true);
-			serverReader = new BufferedReader(new InputStreamReader(
-					socket.getInputStream()));
+			this.controllerChannel=(useBase64)?
+					new Base64Channel(socket):
+					new TcpChannel(socket);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		
 
 	}
 
 	@Override
 	public String login(String username, String password) throws IOException {
-		serverWriter.println("login " + username + " " + password);
-		return serverReader.readLine();
+		this.controllerChannel.send("login " + username + " " + password);
+		return this.controllerChannel.receive();				
 	}
+	
+
 
 	@Override
 	public String logout() throws IOException {
-		serverWriter.println("logout");
-		return serverReader.readLine();
+		this.controllerChannel.send("logout");
+		return this.controllerChannel.receive();
 	}
 
 	@Override
 	public String credits() throws IOException {
-		serverWriter.println("credits");
-		return serverReader.readLine();
+		this.controllerChannel.send("credits");
+		return this.controllerChannel.receive();
 	}
 
 	@Override
 	public String buy(long credits) throws IOException {
-		serverWriter.println("buy " + credits);
-		return serverReader.readLine();
+		this.controllerChannel.send("buy "+credits);
+		return this.controllerChannel.receive();
 	}
 
 	@Override
 	public String list() throws IOException {
-		serverWriter.println("list");
-		return serverReader.readLine();
+		this.controllerChannel.send("list");
+		return this.controllerChannel.receive();
 	}
 
 	@Override
 	public String compute(String term) throws IOException {
-		serverWriter.println("compute " + term);
-		return serverReader.readLine();
+		this.controllerChannel.send("compute " + term);
+		return this.controllerChannel.receive();
 	}
 
 	@Override
 	public String exit() {
 		executorService.shutdownNow();
+		
 		try {
-			if (serverReader != null)
-				serverReader.close();
-			if (serverWriter != null)
-				serverWriter.close();
-			if (socket != null && !socket.isClosed())
-				socket.close();
+			this.controllerChannel.close();
 		} catch (IOException e) {
-			return "could'nt close reader, writer and socket";
+			return "couldn't close reader, writer and socket";
 		}
 		return "client shutdown";
 	}
@@ -143,8 +152,23 @@ public class Client implements IClientCli, Runnable {
 
 	@Override
 	public String authenticate(String username) throws IOException {
-		// TODO Auto-generated method stub
-		return null;
+		 
+		// generates a 32 byte secure random number
+		 SecureRandom secureRandom = new SecureRandom();
+		 final byte[] number = new byte[32];
+		 secureRandom.nextBytes(number);
+		 
+		// encode into Base64 format 
+		 
+		 byte[] base64Challenge = Base64.encode(number);
+		 Cipher c=null;
+		 try {
+			c=Cipher.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
+		} catch (NoSuchAlgorithmException|NoSuchPaddingException e) {
+			throw new IOException("Error when initializing Cipher");
+		}
+		this.controllerChannel.send("authenticate " + username+" "+base64Challenge);		 
+		return this.controllerChannel.receive();
 	}
 
 }

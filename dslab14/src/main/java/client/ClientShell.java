@@ -119,6 +119,16 @@ public class ClientShell {
 			return ("couldn't buy " + amount);
 		}
 	}
+	
+	@Command
+	public String authenticate(String username) {
+		try {
+			return client.authenticate(username);
+		} catch (IOException e) {
+			client.exit();
+			return ("couldn't authenticate " + username);
+		}
+	}
 
 	public void register(Client mainclass) {
 		client = mainclass;

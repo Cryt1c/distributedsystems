@@ -1,4 +1,4 @@
-package dslab14;
+package channel;
 
 import java.io.BufferedReader;
 import java.io.IOException;

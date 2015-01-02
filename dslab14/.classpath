@@ -4,7 +4,6 @@
 	<classpathentry kind="src" output="build" path="src/main/resources"/>
 	<classpathentry kind="src" output="build" path="src/test/resources"/>
 	<classpathentry kind="src" output="build" path="src/test/java"/>
-	<classpathentry kind="src" path="channel"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="lib/bcprov-jdk16-140.jar"/>
 	<classpathentry kind="lib" path="lib/commons-logging-1.1.3.jar"/>

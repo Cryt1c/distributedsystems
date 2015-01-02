@@ -1,4 +1,4 @@
-package dslab14;
+package channel;
 
 import java.io.IOException;
 /**
@@ -9,8 +9,9 @@ import java.io.IOException;
 public interface iChannel {
 	/**
 	 * send data to socket
+	 * @throws IOException 
 	 */
-	void send(String string);
+	void send(String string) throws IOException;
 	
 	/**
 	 *  receive data from socket

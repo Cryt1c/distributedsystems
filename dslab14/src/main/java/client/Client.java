@@ -4,19 +4,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.Socket;
-import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import javax.crypto.Cipher;
-import javax.crypto.NoSuchPaddingException;
-
 import org.bouncycastle.util.encoders.Base64;
 
-import dslab14.Base64Channel;
-import dslab14.TcpChannel;
-import dslab14.iChannel;
+import channel.Base64Channel;
+import channel.TcpChannel;
+import channel.iChannel;
 import util.Config;
 
 public class Client implements IClientCli, Runnable {
@@ -159,14 +155,8 @@ public class Client implements IClientCli, Runnable {
 		 secureRandom.nextBytes(number);
 		 
 		// encode into Base64 format 
-		 
 		 byte[] base64Challenge = Base64.encode(number);
-		 Cipher c=null;
-		 try {
-			c=Cipher.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
-		} catch (NoSuchAlgorithmException|NoSuchPaddingException e) {
-			throw new IOException("Error when initializing Cipher");
-		}
+		 
 		this.controllerChannel.send("authenticate " + username+" "+base64Challenge);		 
 		return this.controllerChannel.receive();
 	}

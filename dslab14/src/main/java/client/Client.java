@@ -152,7 +152,7 @@ public class Client implements IClientCli, Runnable {
 
 	@Override
 	public String authenticate(String username) throws IOException {
-		 
+		 if (!useBase64) throw new IOException("authenticate not allowed with non-secur TcpChannels.");
 		// generates a 32 byte secure random number
 		 SecureRandom secureRandom = new SecureRandom();
 		 final byte[] number = new byte[32];

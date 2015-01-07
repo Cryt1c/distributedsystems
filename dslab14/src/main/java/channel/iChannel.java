@@ -11,7 +11,13 @@ public interface iChannel {
 	 * send data to socket
 	 * @throws IOException 
 	 */
-	void send(String string) throws IOException;
+	void send(String message) throws IOException;
+	
+	/**
+	 * send data to socket
+	 * @throws IOException 
+	 */
+	void send(byte[] message) throws IOException;
 	
 	/**
 	 *  receive data from socket
@@ -24,4 +30,6 @@ public interface iChannel {
 	 * @throws IOException on error at closing operation
 	 */
 	void close() throws IOException;
+
+	
 }

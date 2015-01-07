@@ -19,8 +19,8 @@ public class TcpChannel implements iChannel {
 	}
 
 	@Override
-	public void send(String string) {
-		serverWriter.println(string);
+	public void send(String message) throws IOException{
+		this.send(message.getBytes());
 	}
 
 	@Override
@@ -36,6 +36,11 @@ public class TcpChannel implements iChannel {
 			serverWriter.close();
 		if (socket != null && !socket.isClosed())
 			socket.close();
+	}
+
+	@Override
+	public void send(byte[] message) throws IOException {
+		serverWriter.println(message);		
 	}
 
 }

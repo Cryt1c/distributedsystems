@@ -1,19 +1,28 @@
 package client;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.Socket;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+
 import org.bouncycastle.util.encoders.Base64;
 
+import util.Config;
 import channel.Base64Channel;
 import channel.TcpChannel;
 import channel.iChannel;
-import util.Config;
 
 public class Client implements IClientCli, Runnable {
 
@@ -74,8 +83,7 @@ public class Client implements IClientCli, Runnable {
 		
 		try {
 			this.controllerChannel=(useBase64)?
-					new Base64Channel(socket,
-							config.getString("controller.key")):
+					new Base64Channel(socket):
 					new TcpChannel(socket);
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -149,16 +157,27 @@ public class Client implements IClientCli, Runnable {
 
 	@Override
 	public String authenticate(String username) throws IOException {
-		 if (!useBase64) throw new IOException("authenticate not allowed with non-secur TcpChannels.");
-		// generates a 32 byte secure random number
+		// challenge 
 		 SecureRandom secureRandom = new SecureRandom();
 		 final byte[] number = new byte[32];
 		 secureRandom.nextBytes(number);
-		 
-		// encode into Base64 format 
 		 byte[] base64Challenge = Base64.encode(number);
-		 
-		this.controllerChannel.send("authenticate " + username+" "+base64Challenge);		 
+
+		 String message="authenticate " + username+" "+base64Challenge;
+			
+		 // RSA cipher		 
+		 File keyfile=new File(config.getString("controller.key"));
+			
+		 PublicKey publicKey = util.Keys.readPublicPEM(keyfile);
+		 Cipher cipher;
+		try {
+			cipher = Cipher.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
+			cipher.init(Cipher.ENCRYPT_MODE, publicKey);
+			byte[] cipherData=cipher.doFinal(message.getBytes());
+			this.controllerChannel.send(cipherData);
+		} catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException e) {
+			throw new IOException("problems with cipher init.");
+		} 
 		return this.controllerChannel.receive();
 	}
 

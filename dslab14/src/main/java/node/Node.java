@@ -72,7 +72,7 @@ public class Node implements INodeCli, Runnable {
 				+ config.getString("tcp.port");
 		byte[] buf = message.getBytes();
 
-		rmin = config.getInt("node.rmin");
+		setRmin(config.getInt("node.rmin"));
 
 		try {
 			this.packet = new DatagramPacket(buf, buf.length,
@@ -137,7 +137,7 @@ public class Node implements INodeCli, Runnable {
 						if (!clientSocket.equals(null)) {
 							executorService.execute(new NodeWorker(
 									clientSocket, config.getString("log.dir"),
-									componentName, rmin));
+									componentName, node));
 						}
 					}
 				} catch (IOException e) {
@@ -198,7 +198,7 @@ public class Node implements INodeCli, Runnable {
 
 	@Override
 	public String resources() throws IOException {
-		return "" + rmax;
+		return "" + getRmax();
 	}
 
 	private boolean twoPhaseCommit() {
@@ -222,7 +222,7 @@ public class Node implements INodeCli, Runnable {
 		}
 
 		try {
-			buf = new byte[256];
+			buf = new byte[4096];
 			commit = new DatagramPacket(buf, buf.length,
 					InetAddress.getByName(config.getString("controller.host")),
 					config.getInt("controller.udp.port"));
@@ -242,27 +242,32 @@ public class Node implements INodeCli, Runnable {
 				commit.getLength());
 
 		String[] info = temp.split("\n");
-
-		rmax = Integer.parseInt(info[info.length - 1]);
-		System.out.println(rmax);
-
+		
+		int average = Integer.parseInt(info[info.length - 1]) / (info.length - 1);
+		
+		// Tests if the node itself checks if the resource level is suficient
+		
+		if(this.getRmin() > average) {
+			System.out.println("Not enough resources!");	
+			return false;
+		}
+		
+		// If this is the first node, it's always ok to register
 		if (info.length == 2) {
+			setRmax(Integer.parseInt(info[info.length - 1]));
 			return true;
 		}
-
-		int average = rmax / (info.length - 1);
+		
 		message = "!share " + average;
 		Socket[] socketList = new Socket[info.length - 2];
 		
 		// Produces a socketList with all the Sockets which have to be requested
 		for (int i = 1; i < info.length - 1; i++) {
 			String tempData[] = info[i].split(":");
-			System.out.println(tempData[1]);
 			int port = Integer.parseInt(tempData[1]);
 			String IP = tempData[0].substring(1);
 			try {
 				Socket clientSocket = new Socket(IP, port);
-				System.out.println(i-1);
 				socketList[i - 1] = clientSocket;
 			} catch (UnknownHostException e) {
 				// TODO Auto-generated catch block
@@ -281,26 +286,26 @@ public class Node implements INodeCli, Runnable {
 	private boolean askNodes(Socket[] socketList, int average) {
 		for (int i = 0; i < socketList.length; i++) {
 			try {
-				System.out.println(socketList.length+ " " + i);
 				BufferedReader reader = new BufferedReader(
 						new InputStreamReader(socketList[i].getInputStream()));
 				PrintWriter writer = new PrintWriter(
 						socketList[i].getOutputStream(), true);
 
 				writer.println("!share " + average);
-				System.out.println("sent: !share " + average);
+				System.out.println("Requester sent: !share " + average);
 				String input = null;
 				input = reader.readLine();
 
 				if (input != null) {
 					if (input.contains("!ok")) {
+						System.out.println("Requester got: !ok #" + i);
 						continue;
 					} else
 						for(int j = 0; j < socketList.length; j++) {
 							PrintWriter rollbackWriter = new PrintWriter(
 									socketList[j].getOutputStream(), true);
 							rollbackWriter.println("!rollback " + average);
-							System.out.println("sent: !rollback" + average);
+							System.out.println("Requester sent: !rollback" + average);
 							socketList[j].close();
 						}
 					return false;
@@ -317,7 +322,7 @@ public class Node implements INodeCli, Runnable {
 				rollbackWriter = new PrintWriter(
 						socketList[j].getOutputStream(), true);
 				rollbackWriter.println("!commit " + average);
-				System.out.println("sent: !commit" + average);
+				System.out.println("Requester sent: !commit " + average);
 				socketList[j].close();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
@@ -325,6 +330,23 @@ public class Node implements INodeCli, Runnable {
 			}
 			
 		}
+		this.setRmax(average);
 		return true;
+	}
+
+	public synchronized int getRmin() {
+		return rmin;
+	}
+
+	public synchronized void setRmin(int rmin) {
+		this.rmin = rmin;
+	}
+
+	public synchronized int getRmax() {
+		return rmax;
+	}
+
+	public synchronized void setRmax(int rmax) {
+		this.rmax = rmax;
 	}
 }

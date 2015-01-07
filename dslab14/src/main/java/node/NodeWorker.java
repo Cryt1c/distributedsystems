@@ -25,13 +25,13 @@ public class NodeWorker implements Runnable {
 	private BufferedReader reader;
 	private String logdir;
 	private String compName;
-	private int rmin;
+	private Node node;
 
-	public NodeWorker(Socket socket, String logdir, String name, int rmin) {
+	public NodeWorker(Socket socket, String logdir, String name, Node node) {
 		this.socket = socket;
 		this.logdir = logdir;
 		this.compName = name;
-		this.rmin = rmin;
+		this.node = node;
 		Thread.currentThread().setName("controllerworker");
 		try {
 			reader = new BufferedReader(new InputStreamReader(
@@ -57,49 +57,54 @@ public class NodeWorker implements Runnable {
 		try {
 			input = reader.readLine();
 
+
+
+		if (input != null) {
+			String[] temp = input.split(" ");
+			
+			if(temp[0].contains("!share"))  {
+				System.out.println("Receiver got: !share " + temp[1]);
+				answerNodes(temp[1]);
+				input = reader.readLine();
+				
+				temp = input.split(" ");
+				if(temp[0].contains("!commit")) {
+					System.out.println("Receiver got: !commit " + temp[1]);
+					node.setRmax(Integer.parseInt(temp[1]));
+				}
+			}
+			else if(temp[0].contains("!rollback")) {
+				System.out.println("Receiver got: !rollback " + temp[1]);
+			}
+			else {
+				result = calculate(temp);
+				log(temp, result);
+				writer.println(result);
+			}
+		}
 		} catch (IOException e) {
 			System.out.println("NodeWorker: error reading new Line");
 			e.printStackTrace();
-		}
-
-		if (input != null) {
-			if(input.contains("!share"))  {
-				answerNodes(input);
-			}
-			else {
-				result = calculate(input.split(" "));
-				log(input.split(" "), result);
-				writer.println(result);
-			}
 		}
 		this.close();
 	}
 	
 	private void answerNodes(String input) {
-		String[] share = input.split(" ");
-		System.out.println("share: " + share[1] + " rmin: " + rmin);
-		if(Integer.parseInt(share[1]) > rmin) {
+		System.out.println("share: " + input + " rmin: " + node.getRmin());
+		if(Integer.parseInt(input) > node.getRmin()) {
 			writer.println("!ok");
 			System.out.println("sent: !ok");
 		}
 		else {
 			writer.println("!nok");
-			System.out.println("sent: !nok");
+			System.out.println("Receiver sent: !nok");
 		}
-		try {
-			input = reader.readLine();
-
-		} catch (IOException e) {
-			System.out.println("NodeWorker: error reading new Line");
-			e.printStackTrace();
-		}
-//		if(input != null) {
-//			if(input.contains("!commit")) {
-//				
-//			}
-//			else {
-//				
-//			}
+//		try {
+//			input = reader.readLine();
+//
+//		} catch (IOException e) {
+//			System.out.println("NodeWorker: error reading new Line");
+//			e.printStackTrace();
 //		}
 	}
 

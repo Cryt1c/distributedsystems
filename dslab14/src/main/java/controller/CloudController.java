@@ -131,11 +131,9 @@ public class CloudController implements ICloudControllerCli, Runnable {
 
 						// receive the packet, extracts the data and creates new
 						// nodes if needed
-
 						datagramSocket.receive(packet);
 						String[] message = new String(packet.getData())
 								.split(" ");
-						System.out.println("received: " + new String(packet.getData()).trim());
 
 						if (message[0].contains("!hello")) {
 							twoPhaseCommit(packet);

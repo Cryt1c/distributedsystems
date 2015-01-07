@@ -4,11 +4,20 @@
 package controller;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
 import java.util.Arrays;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 
 import org.bouncycastle.util.encoders.Base64;
 
@@ -105,7 +114,8 @@ public class CloudWorker implements Runnable {
 						this.compute(input);
 						break;
 					case "login":
-						this.clientChannel.send("You are already logged in!");
+					case "authenticate":
+						this.clientChannel.send("You are already authenticated or logged in!");
 						break;
 					}
 				}
@@ -120,18 +130,40 @@ public class CloudWorker implements Runnable {
 	 * @param input "authenticate <username> <clientChallenge>"
 	 * @throws IOException 
 	 */
-	private boolean authenticate(String[] input) throws IOException {
-		String receivedClientChallenge=Base64.decode(input[2]).toString();
-		byte[] clientChallenge=Base64.encode(receivedClientChallenge.getBytes());
+	private void authenticate(String[] input) throws IOException {
+		String receivedClientChallenge = Base64.decode(input[2]).toString();
+		byte[] clientChallenge = Base64.encode(receivedClientChallenge
+				.getBytes());
 		byte[] controllerChallenge = Encryption.generateRandom64(new byte[32]);
-		byte[] secretKey=Encryption.generateRandom64(new byte[8]);
-		byte[] iv=Encryption.generateRandom64(new byte[16]);
-		
-		String msg="!ok "+clientChallenge.toString()+" "+controllerChallenge.toString()
-				+" "+secretKey.toString()+" "+iv.toString();
-		this.clientChannel.send(msg);
-		
-		throw new IOException("authentication not successful.");
+		byte[] secretKey = Encryption.generateRandom64(new byte[8]);
+		byte[] iv = Encryption.generateRandom64(new byte[16]);
+
+		String user = input[1];
+
+		// send 2nd message
+		String message = "!ok " + clientChallenge.toString() + " "
+				+ controllerChallenge.toString() + " " + secretKey.toString()
+				+ " " + iv.toString();
+		PublicKey publicUserKey = util.Keys.readPublicPEM(new File(
+				"controller/" + user + ".pub.pem"));
+		Cipher cipher;
+		try {
+			cipher = Cipher
+					.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
+			cipher.init(Cipher.ENCRYPT_MODE, publicUserKey);
+			byte[] cipherData = cipher.doFinal(message.getBytes());
+			this.clientChannel.send(cipherData);
+		} catch (NoSuchAlgorithmException | NoSuchPaddingException
+				| InvalidKeyException | IllegalBlockSizeException
+				| BadPaddingException e) {
+			throw new IOException("authentication not successful.");
+		}
+
+		// receive 3nd message
+		String receivedCloudChallenge = this.clientChannel.receive();
+		if (!receivedCloudChallenge.equals(controllerChallenge.toString())) {
+			throw new IOException("authentication not successful.");
+		}
 	}
 
 	private void close() {

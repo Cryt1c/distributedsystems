@@ -131,6 +131,8 @@ public class CloudWorker implements Runnable {
 	 * @throws IOException 
 	 */
 	private void authenticate(String[] input) throws IOException {
+		// TODO decode via cipher
+		
 		String receivedClientChallenge = Base64.decode(input[2]).toString();
 		byte[] clientChallenge = Base64.encode(receivedClientChallenge
 				.getBytes());

@@ -7,6 +7,7 @@ import java.io.PrintStream;
 import java.net.Socket;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.util.concurrent.ExecutorService;
@@ -166,11 +167,10 @@ public class Client implements IClientCli, Runnable {
 
 		 String message="authenticate " + username+" "+base64Challenge;
 			
-		 // RSA cipher		 
-		 File keyfile=new File(config.getString("controller.key"));
-			
-		 PublicKey publicKey = util.Keys.readPublicPEM(keyfile);
-		 Cipher cipher;
+		// RSA cipher		 
+		File keyfile=new File(config.getString("controller.key"));
+		PublicKey publicKey = util.Keys.readPublicPEM(keyfile);
+		Cipher cipher;
 		try {
 			cipher = Cipher.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
 			cipher.init(Cipher.ENCRYPT_MODE, publicKey);
@@ -179,7 +179,35 @@ public class Client implements IClientCli, Runnable {
 		} catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException e) {
 			throw new IOException("problems with cipher init.");
 		} 
-		return this.controllerChannel.receive();
+		
+		// receive !ok <client-challenge> <controller-challenge> <secret-key> <iv-parameter>
+		// TODO decode via cipher
+		
+		String[] message2 = this.controllerChannel.receive().split(" ");
+		if (message2[0] != "!ok") {
+			throw new IOException("2nd message:expected !ok but got "
+					+ message2[0]);
+		}
+		
+		String clientChallenge = Base64.decode(message2[1]).toString();		
+		if (!clientChallenge.equals(base64Challenge.toString())) {
+			throw new IOException("clientchallenge from 2nd message was wrong");
+		}
+		String controllerChallenge = Base64.decode(message2[2]).toString();
+		String secretKey = Base64.decode(message2[3]).toString();
+		String iv = Base64.decode(message2[4]).toString();
+
+	 PrivateKey privateKey=util.Keys.readPrivatePEM(new File("client/"+username+".pem"));
+		try {
+			cipher=Cipher.getInstance("AES/CTR/NoPadding");
+			cipher.init(Cipher.ENCRYPT_MODE, secretKey ,iv);
+			
+		} catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return "successfully logged in!";
 	}
 
 }

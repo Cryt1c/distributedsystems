@@ -24,6 +24,7 @@ import channel.Base64Channel;
 import channel.TcpChannel;
 import channel.iChannel;
 
+
 public class Client implements IClientCli, Runnable {
 
 	// if true: use Base64Channel if true

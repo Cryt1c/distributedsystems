@@ -10,6 +10,11 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Arrays;
 
+import org.bouncycastle.util.encoders.Base64;
+
+import channel.Base64Channel;
+import channel.iChannel;
+
 /**
  * @author David
  * 
@@ -17,8 +22,6 @@ import java.util.Arrays;
 public class CloudWorker implements Runnable {
 
 	private CloudController cloudController;
-	private PrintWriter writer;
-	private BufferedReader reader;
 	private User user;
 	private NodeSet nodeset;
 	private Socket socket;
@@ -26,26 +29,19 @@ public class CloudWorker implements Runnable {
 	private BufferedReader calcReader;
 	private Socket calcSocket;
 	private boolean closed = true;
+	private iChannel clientChannel =null;
 
 	public CloudWorker(Socket socket, CloudController mainclass) {
 		this.closed = false;
 		this.cloudController = mainclass;
+		try {
+			this.clientChannel=new Base64Channel(socket);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
 		this.socket = socket;
 		Thread.currentThread().setName("clientworker");
-		try {
-			reader = new BufferedReader(new InputStreamReader(
-					socket.getInputStream()));
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		// prepare the writer for responding to clients requests
-		try {
-			writer = new PrintWriter(socket.getOutputStream(), true);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
 	}
 
 	@Override
@@ -53,7 +49,7 @@ public class CloudWorker implements Runnable {
 		try {
 			while (!Thread.interrupted() && !socket.isClosed()) {
 				String[] input = { "" };
-				input = reader.readLine().split(" ");
+				input = this.clientChannel.receive().split(" ");
 
 				if (this.user == null || user.isLoggedin() == false) {
 					switch(input[0]) {
@@ -64,20 +60,23 @@ public class CloudWorker implements Runnable {
 										.getPassword().equals(input[2])) {
 							this.user = cloudController.getUsers()
 									.get(input[1]).setLoggedin(true);
-							writer.println("successfully logged in!");
+							this.clientChannel.send("successfully logged in!");
 						} else {
-							writer.println("wrong credentials!");
+							this.clientChannel.send("wrong credentials!");
 						}
 						break;
 					case "authenticate":
-						if(this.authenticate(input)) {
+						try {
+							this.authenticate(input);
 							this.user = cloudController.getUsers()
 									.get(input[1]).setLoggedin(true);
-						}					
-						
+						}
+						catch(IOException e) {
+							throw new IOException(e.getMessage());
+						}
 						break;
 					default:
-							writer.println("login or authenticate first!");
+						this.clientChannel.send("login or authenticate first!");
 							break;
 						
 					}
@@ -85,27 +84,27 @@ public class CloudWorker implements Runnable {
 					switch (input[0]) {
 					case "logout":
 						this.user.setLoggedin(false);
-						writer.println("loggedout");
+						this.clientChannel.send("loggedout");
 						break;
 
 					case "credits":
-						writer.println("You have " + user.getCredits()
+						this.clientChannel.send("You have " + user.getCredits()
 								+ " credits left.");
 						break;
 					case "buy":
 						user.addCredits(Long.parseLong(input[1]));
-						writer.println("You now have " + user.getCredits()
+						this.clientChannel.send("You now have " + user.getCredits()
 								+ "credits.");
 						break;
 					case "list":
-						writer.println(cloudController.getNodeSet()
+						this.clientChannel.send(cloudController.getNodeSet()
 								.getOperators());
 						break;
 					case "compute":
 						this.compute(input);
 						break;
 					case "login":
-						writer.println("You are already logged in!");
+						this.clientChannel.send("You are already logged in!");
 						break;
 					}
 				}
@@ -115,19 +114,24 @@ public class CloudWorker implements Runnable {
 		}
 	}
 
-	private boolean authenticate(String[] input) {
-		// TODO Auto-generated method stub
-		return false;
+	/**
+	 * 
+	 * @param input "authenticate <username> <clientChallenge>"
+	 * @throws IOException 
+	 */
+	private boolean authenticate(String[] input) throws IOException {
+		// input: 
+	//	!ok <client-challenge> <controller-challenge> <secret-key> <iv-parameter>
+		String clientChallenge=Base64.decode(input[2]).toString();
+		// TODO send !ok <client-challenge> <controller-challenge> <secret-key> <iv-parameter>
+		throw new IOException("authentication not successful.");
 	}
 
 	private void close() {
 		if (user != null)
 			user.setLoggedin(false);
 		try {
-			if (writer != null)
-				writer.close();
-			if (reader != null)
-				reader.close();
+			this.clientChannel.close();
 			if (socket != null && !socket.isClosed())
 				socket.close();
 		} catch (IOException e) {
@@ -143,19 +147,18 @@ public class CloudWorker implements Runnable {
 		}
 	}
 
-	private void compute(String input[]) {
+	private void compute(String input[]) throws IOException {
 		int credits = 0;
 		nodeset = this.cloudController.getNodeSet();
 
 		// checks if user has enough credits left, returns error if not
 		if (this.user.getCredits() < (input.length - 2) * 25) {
-			this.writer
-					.println("Error: You won't have enough credits for this calculation!");
+			this.clientChannel.send("Error: You won't have enough credits for this calculation!");
 			return;
 		}
 		for(int i = 2; i < input.length; i = i + 2) {
 			if(!nodeset.getOperators().contains(input[i])) {
-				this.writer.println("Error: no node for this calculation");
+				this.clientChannel.send("Error: no node for this calculation");
 				return;
 			}
 		}
@@ -183,17 +186,17 @@ public class CloudWorker implements Runnable {
 				input[i + 1] = temp;
 				credits += 50;
 				if (temp.contains("Error: division by 0")) {
-					this.writer.println(temp);
+					this.clientChannel.send(temp);
 					break;
 				}
 			} 
 			if (temp.contains("Error")) {
-				this.writer.println(temp);
+				this.clientChannel.send(temp);
 				break;
 			}
 			
 			else if (i == input.length - 1) {
-				this.writer.println(input[i]);
+				this.clientChannel.send(input[i]);
 			}
 		}
 

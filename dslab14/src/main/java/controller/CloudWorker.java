@@ -56,7 +56,8 @@ public class CloudWorker implements Runnable {
 				input = reader.readLine().split(" ");
 
 				if (this.user == null || user.isLoggedin() == false) {
-					if (input[0].equals("login")) {
+					switch(input[0]) {
+					case "login":
 						if (this.cloudController.getUsers().containsKey(
 								input[1])
 								&& cloudController.getUsers().get(input[1])
@@ -67,10 +68,19 @@ public class CloudWorker implements Runnable {
 						} else {
 							writer.println("wrong credentials!");
 						}
-					} else {
-						writer.println("login first!");
+						break;
+					case "authenticate":
+						if(this.authenticate(input)) {
+							this.user = cloudController.getUsers()
+									.get(input[1]).setLoggedin(true);
+						}					
+						
+						break;
+					default:
+							writer.println("login or authenticate first!");
+							break;
+						
 					}
-
 				} else if (user.isLoggedin() == true) {
 					switch (input[0]) {
 					case "logout":
@@ -103,6 +113,11 @@ public class CloudWorker implements Runnable {
 		} catch (Exception e) {
 			this.closeAll();
 		}
+	}
+
+	private boolean authenticate(String[] input) {
+		// TODO Auto-generated method stub
+		return false;
 	}
 
 	private void close() {

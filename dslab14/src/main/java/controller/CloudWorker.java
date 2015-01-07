@@ -4,11 +4,21 @@
 package controller;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.security.InvalidKeyException;
+import java.security.Key;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+
+import javax.crypto.Mac;
+
+import org.bouncycastle.util.encoders.Base64;
+
+import util.Keys;
 
 /**
  * @author David
@@ -26,10 +36,12 @@ public class CloudWorker implements Runnable {
 	private BufferedReader calcReader;
 	private Socket calcSocket;
 	private boolean closed = true;
+	private String keydir;
 
-	public CloudWorker(Socket socket, CloudController mainclass) {
+	public CloudWorker(String keydir, Socket socket, CloudController mainclass) {
 		this.closed = false;
 		this.cloudController = mainclass;
+		this.keydir = keydir;
 		this.socket = socket;
 		Thread.currentThread().setName("clientworker");
 		try {
@@ -138,13 +150,13 @@ public class CloudWorker implements Runnable {
 					.println("Error: You won't have enough credits for this calculation!");
 			return;
 		}
-		for(int i = 2; i < input.length; i = i + 2) {
-			if(!nodeset.getOperators().contains(input[i])) {
+		for (int i = 2; i < input.length; i = i + 2) {
+			if (!nodeset.getOperators().contains(input[i])) {
 				this.writer.println("Error: no node for this calculation");
 				return;
 			}
 		}
-		
+
 		for (int i = 0; i < input.length; i++) {
 			String temp = "";
 			if (input[i].equals("+")) {
@@ -171,12 +183,12 @@ public class CloudWorker implements Runnable {
 					this.writer.println(temp);
 					break;
 				}
-			} 
+			}
 			if (temp.contains("Error")) {
 				this.writer.println(temp);
 				break;
 			}
-			
+
 			else if (i == input.length - 1) {
 				this.writer.println(input[i]);
 			}
@@ -198,35 +210,48 @@ public class CloudWorker implements Runnable {
 		return returnNode;
 	}
 
-
 	private String sendCalculation(Node node, String[] calc) {
 		String result = "Error: no result";
-
+		String sCalc = calc[0] + " " + calc[1] + " " + calc[2];
+		
 		if (node == null) {
 			return "Error: no node for this calculation";
 		}
-		
 		try {
 			calcSocket = new Socket(node.getIP(), node.getPort());
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			this.closeCalc();
 			return "Error: technical problems";
 		}
-		
 		if (calcSocket != null) {
 			try {
 				calcWriter = new PrintWriter(calcSocket.getOutputStream(), true);
 				calcReader = new BufferedReader(new InputStreamReader(
 						calcSocket.getInputStream()));
-
-				calcWriter.println(calc[0] + " " + calc[1] + " " + calc[2]);
-
+				
+				// adds the HMAC to the calculation
+				Key secretKey = Keys.readSecretKey(new File(keydir));
+				Mac hMac = Mac.getInstance("HmacSHA256");
+				hMac.init(secretKey);
+				hMac.update(sCalc.getBytes());
+				byte[] hash = hMac.doFinal();
+				sCalc = new String(Base64.encode(hash)) + " " + sCalc;
+				
+				System.out.println(sCalc);
+				calcWriter.println(sCalc);
+				
 				result = calcReader.readLine();
+				
 			} catch (IOException e) {
 				e.printStackTrace();
 				this.closeCalc();
 				return "Error: technical problems";
+			} catch (NoSuchAlgorithmException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (InvalidKeyException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
 		}
 		this.closeCalc();

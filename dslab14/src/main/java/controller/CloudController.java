@@ -5,11 +5,9 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -178,7 +176,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 						Socket clientSocket = null;
 						clientSocket = serverSocket.accept();
 						if (!clientSocket.equals(null)) {
-							workers.add(new CloudWorker(clientSocket,
+							workers.add(new CloudWorker(config.getString("hmac.key"), clientSocket,
 									cloudcontroller));
 							executorService.execute(workers.get(workers.size() - 1));
 						}

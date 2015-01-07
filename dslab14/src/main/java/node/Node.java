@@ -136,7 +136,7 @@ public class Node implements INodeCli, Runnable {
 						clientSockets.add(clientSocket);
 						if (!clientSocket.equals(null)) {
 							executorService.execute(new NodeWorker(
-									clientSocket, config.getString("log.dir"),
+									clientSocket, config.getString("log.dir"), config.getString("hmac.key"),
 									componentName, node));
 						}
 					}

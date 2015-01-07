@@ -11,8 +11,19 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.Socket;
+import java.security.InvalidKeyException;
+import java.security.Key;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
+
+import javax.crypto.Mac;
+
+import org.bouncycastle.util.encoders.Base64;
+
+import util.Keys;
 
 /**
  * @author David
@@ -26,10 +37,13 @@ public class NodeWorker implements Runnable {
 	private String logdir;
 	private String compName;
 	private Node node;
+	private String keydir;
 
-	public NodeWorker(Socket socket, String logdir, String name, Node node) {
+	public NodeWorker(Socket socket, String logdir, String keydir, String name,
+			Node node) {
 		this.socket = socket;
 		this.logdir = logdir;
+		this.keydir = keydir;
 		this.compName = name;
 		this.node = node;
 		Thread.currentThread().setName("controllerworker");
@@ -57,77 +71,91 @@ public class NodeWorker implements Runnable {
 		try {
 			input = reader.readLine();
 
+			if (input != null) {
+				String[] temp = input.split(" ");
+				// another Node is filing a share request
+				if (temp[0].contains("!share")) {
+					System.out.println("Receiver got: !share " + temp[1]);
+					answerNodes(temp[1]);
+					input = reader.readLine();
 
+					temp = input.split(" ");
+					if (temp[0].contains("!commit")) {
+						System.out.println("Receiver got: !commit " + temp[1]);
+						node.setRmax(Integer.parseInt(temp[1]));
+					}
+				}
+				// another Node stopped the share request
+				else if (temp[0].contains("!rollback")) {
+					System.out.println("Receiver got: !rollback " + temp[1]);
+				}
 
-		if (input != null) {
-			String[] temp = input.split(" ");
-			
-			if(temp[0].contains("!share"))  {
-				System.out.println("Receiver got: !share " + temp[1]);
-				answerNodes(temp[1]);
-				input = reader.readLine();
-				
-				temp = input.split(" ");
-				if(temp[0].contains("!commit")) {
-					System.out.println("Receiver got: !commit " + temp[1]);
-					node.setRmax(Integer.parseInt(temp[1]));
+				// Received String is a calculation
+				else {
+					System.out.println("Node got: new calc");
+
+					// check if HMAC is correct
+					Key secretKey = Keys.readSecretKey(new File(keydir));
+					Mac hMac = Mac.getInstance("HmacSHA256");
+					hMac.init(secretKey);
+					hMac.update((temp[1] + " " + temp[2] + " " + temp[3])
+							.getBytes());
+					byte[] computedHash = hMac.doFinal();
+					byte[] receivedHash = Base64.decode(temp[0].getBytes());
+					boolean validHash = MessageDigest.isEqual(computedHash,
+							receivedHash);
+					if (false) {
+						temp = Arrays.copyOfRange(temp, 1, temp.length);
+						result = calculate(temp);
+						log(temp, result);
+						writer.println(result);
+					}
+					else {
+						result = new String(Base64.encode(computedHash)) + " !tampered " + temp[1] + " " + temp[2] + " " + temp[3];
+						System.out.println(result);
+						writer.println(result);
+					}
 				}
 			}
-			else if(temp[0].contains("!rollback")) {
-				System.out.println("Receiver got: !rollback " + temp[1]);
-			}
-			else {
-				result = calculate(temp);
-				log(temp, result);
-				writer.println(result);
-			}
-		}
-		} catch (IOException e) {
-			System.out.println("NodeWorker: error reading new Line");
+		} catch (IOException | NoSuchAlgorithmException | InvalidKeyException e) {
 			e.printStackTrace();
 		}
 		this.close();
 	}
-	
+
 	private void answerNodes(String input) {
 		System.out.println("share: " + input + " rmin: " + node.getRmin());
-		if(Integer.parseInt(input) > node.getRmin()) {
+		if (Integer.parseInt(input) > node.getRmin()) {
 			writer.println("!ok");
 			System.out.println("sent: !ok");
-		}
-		else {
+		} else {
 			writer.println("!nok");
 			System.out.println("Receiver sent: !nok");
 		}
-//		try {
-//			input = reader.readLine();
-//
-//		} catch (IOException e) {
-//			System.out.println("NodeWorker: error reading new Line");
-//			e.printStackTrace();
-//		}
 	}
 
 	// closes writer, reader and socket
 	private void close() {
 		try {
-			if (writer != null)this.writer.close();
-			if (reader != null)this.reader.close();
-			if (socket != null && !socket.isClosed())this.socket.close();
+			if (writer != null)
+				this.writer.close();
+			if (reader != null)
+				this.reader.close();
+			if (socket != null && !socket.isClosed())
+				this.socket.close();
 		} catch (IOException e) {
 			System.out.println("Error closing writer, reader or socket");
 			e.printStackTrace();
 		}
 	}
-	
-    private static final ThreadLocal<SimpleDateFormat> formatter = new ThreadLocal<SimpleDateFormat>(){
-        @Override
-        protected SimpleDateFormat initialValue()
-        {
-            return new SimpleDateFormat("yyyyMMdd_HHmmss.SSS");
-        }
-    };
-	
+
+	private static final ThreadLocal<SimpleDateFormat> formatter = new ThreadLocal<SimpleDateFormat>() {
+		@Override
+		protected SimpleDateFormat initialValue() {
+			return new SimpleDateFormat("yyyyMMdd_HHmmss.SSS");
+		}
+	};
+
 	private void log(String[] input, String result) {
 		Date now = new Date();
 		String date = formatter.get().format(now);

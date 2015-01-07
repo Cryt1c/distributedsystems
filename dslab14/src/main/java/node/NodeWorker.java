@@ -25,11 +25,13 @@ public class NodeWorker implements Runnable {
 	private BufferedReader reader;
 	private String logdir;
 	private String compName;
+	private int rmin;
 
-	public NodeWorker(Socket socket, String logdir, String name) {
+	public NodeWorker(Socket socket, String logdir, String name, int rmin) {
 		this.socket = socket;
 		this.logdir = logdir;
 		this.compName = name;
+		this.rmin = rmin;
 		Thread.currentThread().setName("controllerworker");
 		try {
 			reader = new BufferedReader(new InputStreamReader(
@@ -61,13 +63,46 @@ public class NodeWorker implements Runnable {
 		}
 
 		if (input != null) {
-			result = calculate(input.split(" "));
-			log(input.split(" "), result);
-			writer.println(result);
+			if(input.contains("!share"))  {
+				answerNodes(input);
+			}
+			else {
+				result = calculate(input.split(" "));
+				log(input.split(" "), result);
+				writer.println(result);
+			}
 		}
 		this.close();
 	}
 	
+	private void answerNodes(String input) {
+		String[] share = input.split(" ");
+		System.out.println("share: " + share[1] + " rmin: " + rmin);
+		if(Integer.parseInt(share[1]) > rmin) {
+			writer.println("!ok");
+			System.out.println("sent: !ok");
+		}
+		else {
+			writer.println("!nok");
+			System.out.println("sent: !nok");
+		}
+		try {
+			input = reader.readLine();
+
+		} catch (IOException e) {
+			System.out.println("NodeWorker: error reading new Line");
+			e.printStackTrace();
+		}
+//		if(input != null) {
+//			if(input.contains("!commit")) {
+//				
+//			}
+//			else {
+//				
+//			}
+//		}
+	}
+
 	// closes writer, reader and socket
 	private void close() {
 		try {

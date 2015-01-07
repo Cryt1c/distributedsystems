@@ -1,8 +1,11 @@
 package node;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -16,8 +19,6 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import controller.CloudWorker;
 
 import util.Config;
 
@@ -136,7 +137,7 @@ public class Node implements INodeCli, Runnable {
 						if (!clientSocket.equals(null)) {
 							executorService.execute(new NodeWorker(
 									clientSocket, config.getString("log.dir"),
-									componentName));
+									componentName, rmin));
 						}
 					}
 				} catch (IOException e) {
@@ -219,7 +220,7 @@ public class Node implements INodeCli, Runnable {
 		} catch (IOException e) {
 			System.out.println("couldn't send !hello");
 		}
-		
+
 		try {
 			buf = new byte[256];
 			commit = new DatagramPacket(buf, buf.length,
@@ -229,8 +230,7 @@ public class Node implements INodeCli, Runnable {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
-		
-		
+
 		try {
 			datagramSocket.receive(commit);
 		} catch (IOException e) {
@@ -238,7 +238,6 @@ public class Node implements INodeCli, Runnable {
 			e.printStackTrace();
 		}
 
-		//System.out.println(commit.getLength());
 		String temp = new String(commit.getData(), commit.getOffset(),
 				commit.getLength());
 
@@ -251,20 +250,20 @@ public class Node implements INodeCli, Runnable {
 			return true;
 		}
 
-		String[] test = new String[info.length - 2];
-
-		int average = rmax / (info.length - 2);
-
+		int average = rmax / (info.length - 1);
 		message = "!share " + average;
-
-		// TODO figure out how to get if all nodes are accepting the share offer
-		for (int i = 0; i < test.length; i++) {
-			String IP = test[i].split(" ")[0];
-			int port = Integer.getInteger(test[i].split(" ")[1]);
+		Socket[] socketList = new Socket[info.length - 2];
+		
+		// Produces a socketList with all the Sockets which have to be requested
+		for (int i = 1; i < info.length - 1; i++) {
+			String tempData[] = info[i].split(":");
+			System.out.println(tempData[1]);
+			int port = Integer.parseInt(tempData[1]);
+			String IP = tempData[0].substring(1);
 			try {
 				Socket clientSocket = new Socket(IP, port);
-				executorService
-						.execute(new CommitWorker(message, clientSocket));
+				System.out.println(i-1);
+				socketList[i - 1] = clientSocket;
 			} catch (UnknownHostException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -272,10 +271,60 @@ public class Node implements INodeCli, Runnable {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-
 		}
+		
+		return askNodes(socketList, average);
 
-		return false;
 	}
+	
+	// Requests all the Nodes if they are ok with the new average
+	private boolean askNodes(Socket[] socketList, int average) {
+		for (int i = 0; i < socketList.length; i++) {
+			try {
+				System.out.println(socketList.length+ " " + i);
+				BufferedReader reader = new BufferedReader(
+						new InputStreamReader(socketList[i].getInputStream()));
+				PrintWriter writer = new PrintWriter(
+						socketList[i].getOutputStream(), true);
 
+				writer.println("!share " + average);
+				System.out.println("sent: !share " + average);
+				String input = null;
+				input = reader.readLine();
+
+				if (input != null) {
+					if (input.contains("!ok")) {
+						continue;
+					} else
+						for(int j = 0; j < socketList.length; j++) {
+							PrintWriter rollbackWriter = new PrintWriter(
+									socketList[j].getOutputStream(), true);
+							rollbackWriter.println("!rollback " + average);
+							System.out.println("sent: !rollback" + average);
+							socketList[j].close();
+						}
+					return false;
+				}
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
+		for(int j = 0; j < socketList.length; j++) {
+			PrintWriter rollbackWriter;
+			try {
+				rollbackWriter = new PrintWriter(
+						socketList[j].getOutputStream(), true);
+				rollbackWriter.println("!commit " + average);
+				System.out.println("sent: !commit" + average);
+				socketList[j].close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+		}
+		return true;
+	}
 }

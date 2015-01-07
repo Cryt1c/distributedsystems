@@ -43,7 +43,7 @@ public class NodeSet {
 		String ipport = "";
 		for(Node element : nodes) {
 			if(element.isOnline()) {
-				ipport += element.getIP() + "" + element.getPort() + "\n";
+				ipport += element.getIP() + ":" + element.getPort() + "\n";
 			}
 		}
 		return ipport;

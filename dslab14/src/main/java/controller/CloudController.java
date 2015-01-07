@@ -135,7 +135,8 @@ public class CloudController implements ICloudControllerCli, Runnable {
 						datagramSocket.receive(packet);
 						String[] message = new String(packet.getData())
 								.split(" ");
-						
+						System.out.println("received: " + new String(packet.getData()).trim());
+
 						if (message[0].contains("!hello")) {
 							twoPhaseCommit(packet);
 						} else {
@@ -143,9 +144,8 @@ public class CloudController implements ICloudControllerCli, Runnable {
 									+ message[1].trim())) {
 
 								nodeSet.add(new Node(packet.getAddress(),
-										Integer.parseInt(message[2]
-												.trim()), message[0],
-										message[1].trim(), config
+										Integer.parseInt(message[2].trim()),
+										message[0], message[1].trim(), config
 												.getInt("node.timeout")));
 							}
 							lastpacket.put(message[0],
@@ -263,15 +263,14 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	private void twoPhaseCommit(DatagramPacket commit) {
 		String message = "!init" + "\n" + nodeSet.getIPPort() + rmax;
 		System.out.println(message);
-		
+
 		byte[] buf = message.getBytes();
 
 		commit = new DatagramPacket(buf, buf.length, commit.getSocketAddress());
-		
-		
+
 		try {
 			datagramSocket.send(commit);
-			
+
 		} catch (IOException e) {
 			System.out.println("couldn't send twoPhaseCommit");
 		}

@@ -13,6 +13,7 @@ import java.util.Arrays;
 import org.bouncycastle.util.encoders.Base64;
 
 import channel.Base64Channel;
+import channel.Encryption;
 import channel.iChannel;
 
 /**
@@ -120,10 +121,16 @@ public class CloudWorker implements Runnable {
 	 * @throws IOException 
 	 */
 	private boolean authenticate(String[] input) throws IOException {
-		// input: 
-	//	!ok <client-challenge> <controller-challenge> <secret-key> <iv-parameter>
-		String clientChallenge=Base64.decode(input[2]).toString();
-		// TODO send !ok <client-challenge> <controller-challenge> <secret-key> <iv-parameter>
+		String receivedClientChallenge=Base64.decode(input[2]).toString();
+		byte[] clientChallenge=Base64.encode(receivedClientChallenge.getBytes());
+		byte[] controllerChallenge = Encryption.generateRandom64(new byte[32]);
+		byte[] secretKey=Encryption.generateRandom64(new byte[8]);
+		byte[] iv=Encryption.generateRandom64(new byte[16]);
+		
+		String msg="!ok "+clientChallenge.toString()+" "+controllerChallenge.toString()
+				+" "+secretKey.toString()+" "+iv.toString();
+		this.clientChannel.send(msg);
+		
 		throw new IOException("authentication not successful.");
 	}
 

@@ -21,6 +21,7 @@ public class ComputationRequestInfo implements Serializable {
 	private String name;
 	private List<String> data = new LinkedList<String>();
 
+	// gets all the logs for the node (name) in logdir
 	public ComputationRequestInfo(String logdir, String name) {
 		this.setName(name);
 		File f = new File(logdir + "/");
@@ -61,7 +62,8 @@ public class ComputationRequestInfo implements Serializable {
 	public List<String> getData() {
 		return data;
 	}
-
+	
+	
 	public void setData(List<String> data) {
 		this.data = data;
 	}

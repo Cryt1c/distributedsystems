@@ -91,7 +91,7 @@ public class CloudWorker implements Runnable {
 								+ " credits left.");
 						break;
 					case "buy":
-						user.addCredits(Long.parseLong(input[1]));
+						user.addCredits(Integer.parseInt(input[1]));
 						writer.println("You now have " + user.getCredits()
 								+ "credits.");
 						break;
@@ -205,7 +205,7 @@ public class CloudWorker implements Runnable {
 				this.writer.println(input[i]);
 			}
 		}
-
+		
 		this.user.setCredits(this.user.getCredits() - credits);
 	}
 

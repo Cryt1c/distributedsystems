@@ -3,16 +3,22 @@
  */
 package controller;
 
+import java.rmi.RemoteException;
+
+import admin.INotificationCallback;
+
 /**
  * @author David
- *
+ * 
  */
 public class User {
 	private String name = "";
 	private String password = "";
-	private long credits;
+	private int credits;
 	private boolean loggedin = false;
-	
+	private int subscribe = Integer.MIN_VALUE;
+	private INotificationCallback callback = null;
+
 	public boolean isLoggedin() {
 		return loggedin;
 	}
@@ -26,11 +32,21 @@ public class User {
 		return password;
 	}
 
-	public long getCredits() {
+	public int getCredits() {
 		return credits;
 	}
 
-	public synchronized void setCredits(long amount) {
+	public synchronized void setCredits(int amount) {
+		if (this.callback != null) {
+			if(amount < subscribe) {
+				try {
+					callback.notify(name, amount);
+				} catch (RemoteException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
 		this.credits = amount;
 	}
 
@@ -41,16 +57,32 @@ public class User {
 
 	@Override
 	public String toString() {
-		return name + (loggedin ? " online " : " offline ") + "Credits: " + credits;
+		return name + (loggedin ? " online " : " offline ") + "Credits: "
+				+ credits;
 	}
 
 	public String getName() {
-		return name;		
+		return name;
 	}
 
-	public synchronized void addCredits(long amount) {
+	public synchronized void addCredits(int amount) {
 		this.credits += amount;
 	}
-	
-	
+
+	public int getSubscribe() {
+		return subscribe;
+	}
+
+	public void setSubscribe(int subscribe) {
+		this.subscribe = subscribe;
+	}
+
+	public INotificationCallback getCallback() {
+		return callback;
+	}
+
+	public void setCallback(INotificationCallback callback) {
+		this.callback = callback;
+	}
+
 }

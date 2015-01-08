@@ -1,9 +1,7 @@
 package controller;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.PrintStream;
 import java.io.PrintWriter;
@@ -322,9 +320,12 @@ public class CloudController implements ICloudControllerCli, IAdminConsole, Runn
 	@Override
 	public boolean subscribe(String username, int credits,
 			INotificationCallback callback) throws RemoteException {
-		if(credits>400){
-			callback.notify(username, credits);
-		}
+		
+		users.get(username).setSubscribe(credits);
+		users.get(username).setCallback(callback);
+//		if(credits>400){
+//			callback.notify(username, credits);
+//		}
 		return false;
 	}
 
@@ -370,12 +371,24 @@ public class CloudController implements ICloudControllerCli, IAdminConsole, Runn
 				e.printStackTrace();
 			}
 		}
+		
+		// close all sockets to the nodes
+		for (int i = 0; i < socketList.length; i++) {
+			try {
+				if (socketList[i] != null) {
+					socketList[i].close();
+				}
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 		return result;
 	}
 	
 	@Override
 	public LinkedHashMap<Character, Long> statistics() throws RemoteException {
-		LinkedHashMap<Character, Long> stat = new LinkedHashMap();
+		LinkedHashMap<Character, Long> stat = new LinkedHashMap<Character, Long>();
 		if(cw.getMinus() > 0){
 			stat.put('-',(long) cw.getMinus());
 		}

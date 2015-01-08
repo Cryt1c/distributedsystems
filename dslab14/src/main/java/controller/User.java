@@ -40,7 +40,7 @@ public class User {
 		if (this.callback != null) {
 			if(amount < subscribe) {
 				try {
-					callback.notify(name, amount);
+				callback.notify(name, amount);
 				} catch (RemoteException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();

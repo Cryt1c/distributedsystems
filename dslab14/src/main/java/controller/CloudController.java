@@ -320,12 +320,15 @@ public class CloudController implements ICloudControllerCli, IAdminConsole, Runn
 	@Override
 	public boolean subscribe(String username, int credits,
 			INotificationCallback callback) throws RemoteException {
-		
+		int credits2 =credits;
 		users.get(username).setSubscribe(credits);
 		users.get(username).setCallback(callback);
-//		if(credits>400){
-//			callback.notify(username, credits);
-//		}
+		int check;
+		check = users.get(username).getCredits();
+		if(check<credits){
+			callback.notify(username, credits2);
+			
+		}
 		return false;
 	}
 

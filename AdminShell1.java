@@ -3,12 +3,8 @@ package admin;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.rmi.RemoteException;
-import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
 
-import model.ComputationRequestInfo;
 import cli.Command;
 import cli.Shell;
 
@@ -67,29 +63,6 @@ public class AdminShell {
 	public LinkedHashMap<Character, Long> statistics(){
 		try {
 			return adminconsole.statistics();
-		} catch (RemoteException e) {
-			e.printStackTrace();
-			return null;
-		}
-	}
-	
-	@Command
-	public String getLogs(){
-		try {
-			List<ComputationRequestInfo> info = adminconsole.getLogs();
-			List<String> result = new LinkedList<String>();
-			String logs = "";
-			
-			for(ComputationRequestInfo element: info) {
-				result.addAll(element.getData());
-			}
-			
-			Collections.sort(result);
-			for(String element: result) {
-				logs += element;
-			}
-			
-			return logs;
 		} catch (RemoteException e) {
 			e.printStackTrace();
 			return null;

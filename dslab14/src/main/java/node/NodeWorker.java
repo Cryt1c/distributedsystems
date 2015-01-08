@@ -8,6 +8,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.Socket;
@@ -15,6 +17,7 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 
+import model.ComputationRequestInfo;
 import util.Hasher;
 
 /**
@@ -76,6 +79,14 @@ public class NodeWorker implements Runnable {
 						//System.out.println("Receiver got: !commit " + temp[1]);
 						node.setRmax(Integer.parseInt(temp[1]));
 					}
+				}
+				
+				// CloudController requests the ComputationalRequestInfo of node
+				else if(temp[0].contains("!info")) {
+					ComputationRequestInfo object = new ComputationRequestInfo(logdir, compName);
+					OutputStream output = socket.getOutputStream();
+					ObjectOutputStream objectoutput = new ObjectOutputStream(output);
+					objectoutput.writeObject(object);
 				}
 				
 				// another Node stopped the share request

@@ -1,5 +1,12 @@
 package admin;
 
+import cli.Command;
+import cli.Shell;
+import client.ClientShell;
+import controller.IAdminConsole;
+import model.ComputationRequestInfo;
+import util.Config;
+
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.rmi.NotBoundException;
@@ -15,10 +22,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-
-import model.ComputationRequestInfo;
-import util.Config;
-import controller.IAdminConsole;
 
 /**
  * Please note that this class is not needed for Lab 1, but will later be
@@ -77,7 +80,6 @@ public class AdminConsole implements IAdminConsole, INotificationCallback, Runna
 		shell.run();
 	}
 	
-
 	@Override
 	public boolean subscribe(String username, int credits,
 			INotificationCallback callback) throws RemoteException {
@@ -87,8 +89,8 @@ public class AdminConsole implements IAdminConsole, INotificationCallback, Runna
 
 	@Override
 	public List<ComputationRequestInfo> getLogs() throws RemoteException {
-		List<ComputationRequestInfo> info = adminService.getLogs();
-		return info;
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 	@Override
@@ -97,11 +99,11 @@ public class AdminConsole implements IAdminConsole, INotificationCallback, Runna
 		System.out.println("Und jetzt als toString");
 		System.out.println(adminService.statistics().toString());*/
 		
-		Map<Character, Long> sortedMap = mapSortedByValues(adminService.statistics());
+		Map sortedMap = mapSortedByValues(adminService.statistics());
 	    //System.out.println(sortedMap);
 				
 		
-		for (Iterator<Character> iter = sortedMap.keySet().iterator(); iter.hasNext();) {
+		for (Iterator iter = sortedMap.keySet().iterator(); iter.hasNext();) {
 			Character key =  (Character) iter.next();
 			System.out.println(sortedMap.get(key)+" "+key);
 		
@@ -130,8 +132,7 @@ public class AdminConsole implements IAdminConsole, INotificationCallback, Runna
 	
 	@Override
 	public void notify(String username, int credits) throws RemoteException {
-		// TODO Auto-generated method stub
-		
+		System.out.println("Notification: "+username+" has less than "+credits+" credits.");
 	}
 	
 	//sorter fuer statistics
@@ -151,7 +152,6 @@ public class AdminConsole implements IAdminConsole, INotificationCallback, Runna
 	        sortedMap.put(entry.getKey(), entry.getValue());
 	    return sortedMap;
 	}
-	
 	
 	/**
 	 * @param args

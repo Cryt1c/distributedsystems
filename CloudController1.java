@@ -1,18 +1,13 @@
 package controller;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.ObjectInputStream;
 import java.io.PrintStream;
-import java.io.PrintWriter;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
-import java.net.UnknownHostException;
 import java.rmi.AlreadyBoundException;
 import java.rmi.NoSuchObjectException;
 import java.rmi.RemoteException;
@@ -21,9 +16,12 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.security.Key;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Timer;
@@ -32,8 +30,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import model.ComputationRequestInfo;
-import util.Config;
 import admin.INotificationCallback;
+import util.Config;
 
 public class CloudController implements ICloudControllerCli, IAdminConsole, Runnable {
 
@@ -230,7 +228,7 @@ public class CloudController implements ICloudControllerCli, IAdminConsole, Runn
 	public String nodes() throws IOException {
 		int count = 1;
 		String result = "";
-		
+
 		for (Node entry : nodeSet.getSet()) {
 			result += count++ + ". " + entry + "\n";
 		}
@@ -275,6 +273,7 @@ public class CloudController implements ICloudControllerCli, IAdminConsole, Runn
 
 		}
 		return "cloudcontroller shutdown";
+		
 	}
 
 	public HashMap<String, User> getUsers() {
@@ -287,7 +286,7 @@ public class CloudController implements ICloudControllerCli, IAdminConsole, Runn
 
 	private void twoPhaseCommit(DatagramPacket commit) {
 		String message = "!init" + "\n" + nodeSet.getIPPort() + rmax;
-		//System.out.println(message);
+		System.out.println(message);
 
 		byte[] buf = message.getBytes();
 
@@ -330,49 +329,10 @@ public class CloudController implements ICloudControllerCli, IAdminConsole, Runn
 
 	@Override
 	public List<ComputationRequestInfo> getLogs() throws RemoteException {
-		String[] ipport = nodeSet.getIPPort().split("\n");
-		List<ComputationRequestInfo> result = new ArrayList<ComputationRequestInfo>();
-
-		// Produces a socketList with all the Sockets which have to be requested
-		Socket[] socketList = new Socket[ipport.length];
-		
-		for (int i = 0; i < ipport.length; i++) {
-			String tempData[] = ipport[i].split(":");
-			int port = Integer.parseInt(tempData[1]);
-			String IP = tempData[0].substring(1);
-			try {
-				Socket clientSocket = new Socket(IP, port);
-				socketList[i] = clientSocket;
-			} catch (UnknownHostException e) {
-				e.printStackTrace();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-		
-		for (int i = 0; i < socketList.length; i++) {
-			try {
-				PrintWriter writer = new PrintWriter(
-						socketList[i].getOutputStream(), true);
-
-				writer.println("!info");
-				
-				InputStream is = socketList[i].getInputStream();  
-				ObjectInputStream ois = new ObjectInputStream(is);  
-				ComputationRequestInfo to = (ComputationRequestInfo) ois.readObject();  
-				if (to!=null){result.add(to);}  
-				
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (ClassNotFoundException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-		return result;
+		// TODO Auto-generated method stub
+		return null;
 	}
-	
+
 	@Override
 	public LinkedHashMap<Character, Long> statistics() throws RemoteException {
 		LinkedHashMap<Character, Long> stat = new LinkedHashMap();
@@ -442,7 +402,6 @@ public class CloudController implements ICloudControllerCli, IAdminConsole, Runn
 					+ e.getMessage());
 		}
 	}
-	
 	
 
 }

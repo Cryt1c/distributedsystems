@@ -5,20 +5,6 @@
 * 	Node			node2
 * 	Node			node3
 
-alice:		!login alice 12345
+admin1 !getLogs
 
-alice: !compute 1 * 1
-
-alice: !compute 1 / 1
-
-alice: !compute 1 + 1
-
-alice: !compute 1 * 1
-
-alice: !compute 1 / 1
-
-alice: !compute 1 * 1
-
-alice: !compute 1 / 1
-
-admin1: !statistics
+admin1 !subscribe alice 200

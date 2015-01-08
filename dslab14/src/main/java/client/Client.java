@@ -5,32 +5,21 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.Socket;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.security.SecureRandom;
+import java.security.Security;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import javax.crypto.BadPaddingException;
-import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
 
 import org.bouncycastle.util.encoders.Base64;
 
 import util.Config;
 import channel.Base64Channel;
+import channel.SecurityHelper;
 import channel.TcpChannel;
 import channel.iChannel;
 
 
 public class Client implements IClientCli, Runnable {
 
-	// if true: use Base64Channel if true
-	// if false: use TCP Channel as before
-	private Boolean useBase64=true;
 	private String componentName;
 	private Config config;
 	private InputStream userRequestStream;
@@ -84,14 +73,21 @@ public class Client implements IClientCli, Runnable {
 		}
 		
 		try {
-			this.controllerChannel=(useBase64)?
-					new Base64Channel(socket):
-					new TcpChannel(socket);
+			File publicKeyFile=new File(config.getString("controller.key"));
+		
+			if(SecurityHelper.useSecurity) {
+				Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+				
+				Base64Channel c=new Base64Channel(socket);
+				c.setPublicKey(util.Keys.readPublicPEM(publicKeyFile));
+				this.controllerChannel=c;
+			}
+			else {
+				this.controllerChannel=new TcpChannel(socket);
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
-
 	}
 
 	@Override
@@ -159,42 +155,30 @@ public class Client implements IClientCli, Runnable {
 
 	@Override
 	public String authenticate(String username) throws IOException {
-		// challenge 
-		 SecureRandom secureRandom = new SecureRandom();
-		 final byte[] number = new byte[32];
-		 secureRandom.nextBytes(number);
-		 byte[] base64Challenge = Base64.encode(number);
+		 Base64Channel channel =(Base64Channel)this.controllerChannel;		
+		 byte[] base64Challenge = SecurityHelper.generateRandom64(new byte[32]);
+		 File f=new File(config.getString("keys.dir")+username+".pem");
+		 channel.setPrivateKey(util.Keys.readPrivatePEM(f));
+		 
+		 // send 1st message
+		 channel.send("authenticate " + username + " " + base64Challenge);
 
-		 String message="authenticate " + username+" "+base64Challenge;
-			
-		// RSA cipher		 
-		File keyfile=new File(config.getString("controller.key"));
-		PublicKey publicKey = util.Keys.readPublicPEM(keyfile);
-		Cipher cipher;
-		try {
-			cipher = Cipher.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
-			cipher.init(Cipher.ENCRYPT_MODE, publicKey);
-			byte[] cipherData=cipher.doFinal(message.getBytes());
-			this.controllerChannel.send(cipherData);
-		} catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException e) {
-			throw new IOException("problems with cipher init.");
-		} 
+		 
+		 // receive 3nd message
+		String[] message = channel.receive().split(" ");
 		
-		// receive !ok <client-challenge> <controller-challenge> <secret-key> <iv-parameter>
-		// TODO decode via cipher
-		
-		String[] message2 = this.controllerChannel.receive().split(" ");
-		if (message2[0] != "!ok") {
+		if (message[0] != "!ok") {
 			throw new IOException("2nd message:expected !ok but got "
-					+ message2[0]);
+					+ message[0]+".");
 		}
 		
-		String clientChallenge = Base64.decode(message2[1]).toString();		
+		String clientChallenge = Base64.decode(message[1]).toString();		
 		if (!clientChallenge.equals(base64Challenge.toString())) {
-			throw new IOException("clientchallenge from 2nd message was wrong");
+			throw new IOException("received an wrong clientchallenge!");
 		}
-		String controllerChallenge = Base64.decode(message2[2]).toString();
-		String secretKey = Base64.decode(message2[3]).toString();
+		String controllerChallenge = Base64.decode(message[2]).toString();
+	
+		/*Key secretKey = new SecretKeySpec(Base64.decode(message2[3]).toString());
 		String iv = Base64.decode(message2[4]).toString();
 
 	 PrivateKey privateKey=util.Keys.readPrivatePEM(new File("client/"+username+".pem"));
@@ -205,7 +189,7 @@ public class Client implements IClientCli, Runnable {
 		} catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}
+		} */
 		
 		return "successfully logged in!";
 	}

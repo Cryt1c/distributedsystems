@@ -2,27 +2,24 @@
  * 
  */
 package controller;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
+import java.security.Security;
 import java.util.Arrays;
 
-import javax.crypto.BadPaddingException;
-import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
 
 import org.bouncycastle.util.encoders.Base64;
 
+import util.Config;
 import channel.Base64Channel;
-import channel.Encryption;
+import channel.SecurityHelper;
+import channel.TcpChannel;
 import channel.iChannel;
 
 /**
@@ -40,15 +37,30 @@ public class CloudWorker implements Runnable {
 	private Socket calcSocket;
 	private boolean closed = true;
 	private iChannel clientChannel =null;
+	private Config config;
+	
 
-	public CloudWorker(Socket socket, CloudController mainclass) {
+	public CloudWorker(Socket socket, CloudController mainclass, Config config) {
 		this.closed = false;
 		this.cloudController = mainclass;
+		this.config=config;
+		
 		try {
-			this.clientChannel=new Base64Channel(socket);
+			if(SecurityHelper.useSecurity) {
+				Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+				
+				File privateKeyFile=new File(config.getString("key"));
+				Base64Channel c=new Base64Channel(socket);
+				c.setPrivateKey(util.Keys.readPrivatePEM(privateKeyFile));
+				this.clientChannel=c;
+			}
+			else {
+				this.clientChannel=new TcpChannel(socket);
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		
 		
 		this.socket = socket;
 		Thread.currentThread().setName("clientworker");
@@ -130,37 +142,25 @@ public class CloudWorker implements Runnable {
 	 * @param input "authenticate <username> <clientChallenge>"
 	 * @throws IOException 
 	 */
-	private void authenticate(String[] input) throws IOException {
-		// TODO decode via cipher
+	private void authenticate(String[] input) throws IOException {		
+
+		String receivedClientChallenge = input[2];
 		
-		String receivedClientChallenge = Base64.decode(input[2]).toString();
-		byte[] clientChallenge = Base64.encode(receivedClientChallenge
-				.getBytes());
-		byte[] controllerChallenge = Encryption.generateRandom64(new byte[32]);
-		byte[] secretKey = Encryption.generateRandom64(new byte[8]);
-		byte[] iv = Encryption.generateRandom64(new byte[16]);
-
-		String user = input[1];
-
-		// send 2nd message
-		String message = "!ok " + clientChallenge.toString() + " "
-				+ controllerChallenge.toString() + " " + secretKey.toString()
-				+ " " + iv.toString();
+		String controllerChallenge=SecurityHelper.generateRandom64(new byte[32]).toString();
+		
+		// prepare and send 2nd message
+		Base64Channel channel=(Base64Channel)this.clientChannel;
+		SecretKey key=Base64Channel.generateSecretAESKey();		
+		byte[] iv = SecurityHelper.generateRandom64(new byte[16]);
+		String user = input[1];		
+		String message = "!ok " + receivedClientChallenge + " "
+				+ controllerChallenge + " " + Base64.encode(key.toString().getBytes())
+				+ " " + Base64.encode(iv);
 		PublicKey publicUserKey = util.Keys.readPublicPEM(new File(
-				"controller/" + user + ".pub.pem"));
-		Cipher cipher;
-		try {
-			cipher = Cipher
-					.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
-			cipher.init(Cipher.ENCRYPT_MODE, publicUserKey);
-			byte[] cipherData = cipher.doFinal(message.getBytes());
-			this.clientChannel.send(cipherData);
-		} catch (NoSuchAlgorithmException | NoSuchPaddingException
-				| InvalidKeyException | IllegalBlockSizeException
-				| BadPaddingException e) {
-			throw new IOException("authentication not successful.");
-		}
-
+				config.getString("keys.dir")+"/" + user + ".pub.pem"));
+		channel.setPublicKey(publicUserKey);
+		channel.send(message);
+		
 		// receive 3nd message
 		String receivedCloudChallenge = this.clientChannel.receive();
 		if (!receivedCloudChallenge.equals(controllerChallenge.toString())) {

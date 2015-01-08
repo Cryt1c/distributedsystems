@@ -14,12 +14,6 @@ public interface iChannel {
 	void send(String message) throws IOException;
 	
 	/**
-	 * send data to socket
-	 * @throws IOException 
-	 */
-	void send(byte[] message) throws IOException;
-	
-	/**
 	 *  receive data from socket
 	 *  @throws IOException on error
 	 */

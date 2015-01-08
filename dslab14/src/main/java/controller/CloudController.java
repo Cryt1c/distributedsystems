@@ -105,6 +105,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 				userResponseStream);
 		shell.register(cloudcontroller);
 		executorService.execute(new Runnable() {
+			@Override
 			public void run() {
 				Thread.currentThread().setName("shellservice");
 				shell.run();
@@ -117,6 +118,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		timer.schedule(task, config.getInt("node.checkPeriod"),
 				config.getInt("node.checkPeriod"));
 		executorService.execute(new Runnable() {
+			@Override
 			public void run() {
 				Thread.currentThread().setName("udpservice");
 				try {
@@ -163,6 +165,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	// start tcpservice-Thread
 	private void startTCPThread() {
 		executorService.execute(new Runnable() {
+			@Override
 			public void run() {
 				Thread.currentThread().setName("tcpservice");
 				workers = new ArrayList<CloudWorker>();
@@ -172,7 +175,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 						clientSocket = serverSocket.accept();
 						if (!clientSocket.equals(null)) {
 							workers.add(new CloudWorker(clientSocket,
-									cloudcontroller));
+									cloudcontroller,config));
 							executorService.execute(workers.get(workers.size() - 1));
 						}
 					}

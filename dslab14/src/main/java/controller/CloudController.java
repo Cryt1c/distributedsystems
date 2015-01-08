@@ -15,9 +15,12 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.security.Key;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Timer;
@@ -27,7 +30,6 @@ import java.util.concurrent.Executors;
 
 import model.ComputationRequestInfo;
 import admin.INotificationCallback;
-
 import util.Config;
 
 public class CloudController implements ICloudControllerCli, IAdminConsole, Runnable {
@@ -341,6 +343,7 @@ public class CloudController implements ICloudControllerCli, IAdminConsole, Runn
 		if(cw.getDiv() > 0){
 			stat.put('/',(long) cw.getDiv());
 		}
+
 		return stat;
 	}
 
@@ -373,4 +376,6 @@ public class CloudController implements ICloudControllerCli, IAdminConsole, Runn
 			e.printStackTrace();
 		}
 	}
+	
+
 }

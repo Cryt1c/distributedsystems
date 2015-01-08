@@ -13,9 +13,13 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.security.Key;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Please note that this class is not needed for Lab 1, but will later be
@@ -92,12 +96,16 @@ public class AdminConsole implements IAdminConsole, INotificationCallback, Runna
 		/*System.out.println(adminService.statistics().entrySet());
 		System.out.println("Und jetzt als toString");
 		System.out.println(adminService.statistics().toString());*/
-		for (Iterator iter = adminService.statistics().keySet().iterator(); iter.hasNext();) {
+		
+		Map sortedMap = mapSortedByValues(adminService.statistics());
+	    //System.out.println(sortedMap);
+				
+		
+		for (Iterator iter = sortedMap.keySet().iterator(); iter.hasNext();) {
 			Character key =  (Character) iter.next();
-			System.out.println(adminService.statistics().get(key)+" "+key);
+			System.out.println(sortedMap.get(key)+" "+key);
 		
-		}
-		
+		}		
 		
 		return null;
 	}
@@ -124,6 +132,24 @@ public class AdminConsole implements IAdminConsole, INotificationCallback, Runna
 	public void notify(String username, int credits) throws RemoteException {
 		// TODO Auto-generated method stub
 		
+	}
+	
+	//sorter fuer statistics
+	public Map<Character, Long> mapSortedByValues(Map<Character, Long> map) {
+	    List<Map.Entry<Character, Long>> entryList = new LinkedList<Map.Entry<Character, Long>>(map.entrySet());
+	    Collections.sort(entryList,
+	            new Comparator<Map.Entry<Character, Long>>() {
+	                @Override
+	                public int compare(Map.Entry<Character, Long> e1, Map.Entry<Character, Long> e2) {
+	                    return (e1.getValue()).compareTo(e2.getValue());
+	                }
+	            }
+	    );
+	    Collections.reverse(entryList); //Reverse value DESC
+	    Map<Character, Long> sortedMap = new LinkedHashMap<Character, Long>();
+	    for (Map.Entry<Character, Long> entry : entryList)
+	        sortedMap.put(entry.getKey(), entry.getValue());
+	    return sortedMap;
 	}
 	
 	/**

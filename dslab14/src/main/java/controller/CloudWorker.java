@@ -4,22 +4,13 @@
 package controller;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.security.InvalidKeyException;
-import java.security.Key;
-import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 
-import javax.crypto.Mac;
-
-import org.bouncycastle.util.encoders.Base64;
-
 import util.Hasher;
-import util.Keys;
 
 /**
  * @author David

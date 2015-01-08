@@ -292,20 +292,20 @@ public class Node implements INodeCli, Runnable {
 						socketList[i].getOutputStream(), true);
 
 				writer.println("!share " + average);
-				System.out.println("Requester sent: !share " + average);
+				//System.out.println("Requester sent: !share " + average);
 				String input = null;
 				input = reader.readLine();
 
 				if (input != null) {
 					if (input.contains("!ok")) {
-						System.out.println("Requester got: !ok #" + i);
+						//System.out.println("Requester got: !ok #" + i);
 						continue;
 					} else
 						for(int j = 0; j < socketList.length; j++) {
 							PrintWriter rollbackWriter = new PrintWriter(
 									socketList[j].getOutputStream(), true);
 							rollbackWriter.println("!rollback " + average);
-							System.out.println("Requester sent: !rollback" + average);
+							//System.out.println("Requester sent: !rollback" + average);
 							socketList[j].close();
 						}
 					return false;
@@ -322,7 +322,7 @@ public class Node implements INodeCli, Runnable {
 				rollbackWriter = new PrintWriter(
 						socketList[j].getOutputStream(), true);
 				rollbackWriter.println("!commit " + average);
-				System.out.println("Requester sent: !commit " + average);
+				//System.out.println("Requester sent: !commit " + average);
 				socketList[j].close();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block

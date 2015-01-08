@@ -1,11 +1,5 @@
 package admin;
 
-import cli.Shell;
-import client.ClientShell;
-import controller.IAdminConsole;
-import model.ComputationRequestInfo;
-import util.Config;
-
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.rmi.NotBoundException;
@@ -20,6 +14,10 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+
+import model.ComputationRequestInfo;
+import util.Config;
+import controller.IAdminConsole;
 
 /**
  * Please note that this class is not needed for Lab 1, but will later be
@@ -97,11 +95,11 @@ public class AdminConsole implements IAdminConsole, INotificationCallback, Runna
 		System.out.println("Und jetzt als toString");
 		System.out.println(adminService.statistics().toString());*/
 		
-		Map sortedMap = mapSortedByValues(adminService.statistics());
+		Map<Character, Long> sortedMap = mapSortedByValues(adminService.statistics());
 	    //System.out.println(sortedMap);
 				
 		
-		for (Iterator iter = sortedMap.keySet().iterator(); iter.hasNext();) {
+		for (Iterator<Character> iter = sortedMap.keySet().iterator(); iter.hasNext();) {
 			Character key =  (Character) iter.next();
 			System.out.println(sortedMap.get(key)+" "+key);
 		

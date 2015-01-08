@@ -76,24 +76,24 @@ public class NodeWorker implements Runnable {
 				String[] temp = input.split(" ");
 				// another Node is filing a share request
 				if (temp[0].contains("!share")) {
-					System.out.println("Receiver got: !share " + temp[1]);
+					//System.out.println("Receiver got: !share " + temp[1]);
 					answerNodes(temp[1]);
 					input = reader.readLine();
 
 					temp = input.split(" ");
 					if (temp[0].contains("!commit")) {
-						System.out.println("Receiver got: !commit " + temp[1]);
+						//System.out.println("Receiver got: !commit " + temp[1]);
 						node.setRmax(Integer.parseInt(temp[1]));
 					}
 				}
 				
 				// another Node stopped the share request
 				else if (temp[0].contains("!rollback")) {
-					System.out.println("Receiver got: !rollback " + temp[1]);
+					//System.out.println("Receiver got: !rollback " + temp[1]);
 				}
 				// Received String is a calculation
 				else {
-					System.out.println("Node got: new calc");
+					//System.out.println("Node got: new calc");
 
 					// checks if message from CloudController has been tampered
 					if (Hasher.testHash(input, keydir)) {
@@ -113,13 +113,13 @@ public class NodeWorker implements Runnable {
 	}
 
 	private void answerNodes(String input) {
-		System.out.println("share: " + input + " rmin: " + node.getRmin());
+		//System.out.println("share: " + input + " rmin: " + node.getRmin());
 		if (Integer.parseInt(input) > node.getRmin()) {
 			writer.println("!ok");
-			System.out.println("sent: !ok");
+			//System.out.println("sent: !ok");
 		} else {
 			writer.println("!nok");
-			System.out.println("Receiver sent: !nok");
+			//System.out.println("Receiver sent: !nok");
 		}
 	}
 

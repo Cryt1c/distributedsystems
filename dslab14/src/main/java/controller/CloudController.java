@@ -280,7 +280,7 @@ public class CloudController implements ICloudControllerCli, IAdminConsole, Runn
 
 	private void twoPhaseCommit(DatagramPacket commit) {
 		String message = "!init" + "\n" + nodeSet.getIPPort() + rmax;
-		System.out.println(message);
+		//System.out.println(message);
 
 		byte[] buf = message.getBytes();
 

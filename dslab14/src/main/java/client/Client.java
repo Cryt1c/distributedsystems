@@ -161,7 +161,7 @@ public class Client implements IClientCli, Runnable {
 		 channel.setPrivateKey(util.Keys.readPrivatePEM(f));
 		 
 		 // send 1st message
-		 String msg="authenticate " + username + " " + base64Challenge;
+		 String msg="authenticate " + username + " " + base64Challenge.toString();
 		 System.out.println("Client: send 1st message "+msg);
 		 channel.send(msg);
 		 

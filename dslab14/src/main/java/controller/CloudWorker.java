@@ -71,10 +71,13 @@ public class CloudWorker implements Runnable {
 		try {
 			while (!Thread.interrupted() && !socket.isClosed()) {
 				String[] input = { "" };
-				input = this.clientChannel.receive().split(" ");
+				System.out.println("receive 2nd message");
+				String msg = this.clientChannel.receive();
 
+				System.out.println("cloudWorker:" + msg);
+				input = msg.split(" ");
 				if (this.user == null || user.isLoggedin() == false) {
-					switch(input[0]) {
+					switch (input[0]) {
 					case "login":
 						if (this.cloudController.getUsers().containsKey(
 								input[1])

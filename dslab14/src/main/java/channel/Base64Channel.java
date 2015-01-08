@@ -26,9 +26,9 @@ public class Base64Channel implements iChannel {
 
 	private TcpChannel channel;
 	// used for encryption
-	private PublicKey publicKey;
+	private PublicKey publicKey=null;
 	// used for decryption
-	private PrivateKey privateKey;
+	private PrivateKey privateKey=null;
 
 	public Base64Channel(Socket socket)
 			throws IOException {
@@ -54,7 +54,12 @@ public class Base64Channel implements iChannel {
 	/* privateKey must be set before calling this method. */
 	public String receive() throws IOException {
 		try {
-			return decryptMessage(Base64.decode(channel.receive().getBytes()));
+			if(privateKey==null) {
+				throw new IOException("private key not set!");
+			}
+			String msg=channel.receive();
+			System.out.println("Base64Channel.receive:"+msg);
+			return decryptMessage(Base64.decode(msg.getBytes()));
 		} catch (Base64DecodingException e) {
 			throw new IOException(e);
 		}
@@ -70,29 +75,46 @@ public class Base64Channel implements iChannel {
 	private byte[] encryptMessage(String message) throws IOException {
 
 		Cipher cipher;
-		try {
-			cipher = Cipher
-					.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
-			cipher.init(Cipher.ENCRYPT_MODE, publicKey);
-			return (cipher.doFinal(message.getBytes()));
-		} catch (NoSuchAlgorithmException | NoSuchPaddingException
-				| InvalidKeyException | IllegalBlockSizeException
-				| BadPaddingException e) {
-			throw new IOException(e);
-		}
+			try {
+				cipher = Cipher
+						.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
+				cipher.init(Cipher.ENCRYPT_MODE, publicKey);
+				return (cipher.doFinal(message.getBytes()));
+			} catch (NoSuchAlgorithmException e) {
+				throw new IOException(e);
+			} catch (NoSuchPaddingException e) {
+				throw new IOException(e);
+			} catch (InvalidKeyException e) {
+				throw new IOException(e);
+			} catch (IllegalBlockSizeException e) {
+				throw new IOException(e);
+			} catch (BadPaddingException e) {
+				throw new IOException(e);
+			}
+			
+		
 	}
 
 	private String decryptMessage(byte[] message) throws IOException {
-		try {
-			Cipher cipher = Cipher
-					.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
-			cipher.init(Cipher.DECRYPT_MODE, privateKey);
-			return (cipher.doFinal(message).toString());
-		} catch (NoSuchAlgorithmException | NoSuchPaddingException
-				| InvalidKeyException | IllegalBlockSizeException
-				| BadPaddingException e) {
-			throw new IOException(e);
-		}
+			Cipher cipher;
+			try {
+				cipher = Cipher
+						.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
+				cipher.init(Cipher.DECRYPT_MODE, privateKey);
+				return (cipher.doFinal(message).toString());
+			} catch (NoSuchAlgorithmException e) {
+				throw new IOException(e);
+			} catch (NoSuchPaddingException e) {
+				throw new IOException(e);
+			} catch (InvalidKeyException e) {
+				throw new IOException(e);
+			} catch (IllegalBlockSizeException e) {
+				throw new IOException(e);
+			} catch (BadPaddingException e) {
+				throw new IOException(e);
+			}
+			
+		
 	}
 
 	@Override

@@ -25,7 +25,7 @@ import controller.IAdminConsole;
  * used in Lab 2. Hence, you do not have to implement it for the first
  * submission.
  */
-public class AdminConsole implements IAdminConsole, INotificationCallback, Runnable {
+public class AdminConsole implements INotificationCallback, Runnable {
 
 	private String componentName;
 	private Config config;
@@ -78,20 +78,20 @@ public class AdminConsole implements IAdminConsole, INotificationCallback, Runna
 	}
 	
 
-	@Override
+
 	public boolean subscribe(String username, int credits,
 			INotificationCallback callback) throws RemoteException {
 			adminService.subscribe(username, credits, this);
 		return false;
 	}
 
-	@Override
+
 	public List<ComputationRequestInfo> getLogs() throws RemoteException {
 		List<ComputationRequestInfo> info = adminService.getLogs();
 		return info;
 	}
 
-	@Override
+
 	public LinkedHashMap<Character, Long> statistics() throws RemoteException {
 		/*System.out.println(adminService.statistics().entrySet());
 		System.out.println("Und jetzt als toString");
@@ -110,19 +110,9 @@ public class AdminConsole implements IAdminConsole, INotificationCallback, Runna
 		return null;
 	}
 
-	@Override
-	public Key getControllerPublicKey() throws RemoteException {
-		// TODO Auto-generated method stub
-		return null;
-	}
 
-	@Override
-	public void setUserPublicKey(String username, byte[] key)
-			throws RemoteException {
-		// TODO Auto-generated method stub
-	}
 	
-	@Override
+
 	public String test() throws RemoteException {
 		return adminService.test();
 	}

@@ -11,20 +11,11 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.Socket;
-import java.security.InvalidKeyException;
-import java.security.Key;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 
-import javax.crypto.Mac;
-
-import org.bouncycastle.util.encoders.Base64;
-
 import util.Hasher;
-import util.Keys;
 
 /**
  * @author David

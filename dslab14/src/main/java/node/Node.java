@@ -136,7 +136,8 @@ public class Node implements INodeCli, Runnable {
 						clientSockets.add(clientSocket);
 						if (!clientSocket.equals(null)) {
 							executorService.execute(new NodeWorker(
-									clientSocket, config.getString("log.dir"), config.getString("hmac.key"),
+									clientSocket, config.getString("log.dir"),
+									config.getString("hmac.key"),
 									componentName, node));
 						}
 					}
@@ -242,25 +243,26 @@ public class Node implements INodeCli, Runnable {
 				commit.getLength());
 
 		String[] info = temp.split("\n");
-		
-		int average = Integer.parseInt(info[info.length - 1]) / (info.length - 1);
-		
+
+		int average = Integer.parseInt(info[info.length - 1])
+				/ (info.length - 1);
+
 		// Tests if the node itself checks if the resource level is suficient
-		
-		if(this.getRmin() > average) {
-			System.out.println("Not enough resources!");	
+
+		if (this.getRmin() > average) {
+			System.out.println("Not enough resources!");
 			return false;
 		}
-		
+
 		// If this is the first node, it's always ok to register
 		if (info.length == 2) {
 			setRmax(Integer.parseInt(info[info.length - 1]));
 			return true;
 		}
-		
+
 		message = "!share " + average;
 		Socket[] socketList = new Socket[info.length - 2];
-		
+
 		// Produces a socketList with all the Sockets which have to be requested
 		for (int i = 1; i < info.length - 1; i++) {
 			String tempData[] = info[i].split(":");
@@ -270,18 +272,29 @@ public class Node implements INodeCli, Runnable {
 				Socket clientSocket = new Socket(IP, port);
 				socketList[i - 1] = clientSocket;
 			} catch (UnknownHostException e) {
-				// TODO Auto-generated catch block
+
 				e.printStackTrace();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
-		
-		return askNodes(socketList, average);
+		boolean result = askNodes(socketList, average);
+
+		for (int i = 0; i < socketList.length; i++) {
+			try {
+				if (socketList[i] != null) {
+					socketList[i].close();
+				}
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		return result;
 
 	}
-	
+
 	// Requests all the Nodes if they are ok with the new average
 	private boolean askNodes(Socket[] socketList, int average) {
 		for (int i = 0; i < socketList.length; i++) {
@@ -292,20 +305,21 @@ public class Node implements INodeCli, Runnable {
 						socketList[i].getOutputStream(), true);
 
 				writer.println("!share " + average);
-				//System.out.println("Requester sent: !share " + average);
+				// System.out.println("Requester sent: !share " + average);
 				String input = null;
 				input = reader.readLine();
 
 				if (input != null) {
 					if (input.contains("!ok")) {
-						//System.out.println("Requester got: !ok #" + i);
+						// System.out.println("Requester got: !ok #" + i);
 						continue;
 					} else
-						for(int j = 0; j < socketList.length; j++) {
+						for (int j = 0; j < socketList.length; j++) {
 							PrintWriter rollbackWriter = new PrintWriter(
 									socketList[j].getOutputStream(), true);
 							rollbackWriter.println("!rollback " + average);
-							//System.out.println("Requester sent: !rollback" + average);
+							// System.out.println("Requester sent: !rollback" +
+							// average);
 							socketList[j].close();
 						}
 					return false;
@@ -315,20 +329,20 @@ public class Node implements INodeCli, Runnable {
 				e.printStackTrace();
 			}
 		}
-		
-		for(int j = 0; j < socketList.length; j++) {
+
+		for (int j = 0; j < socketList.length; j++) {
 			PrintWriter rollbackWriter;
 			try {
 				rollbackWriter = new PrintWriter(
 						socketList[j].getOutputStream(), true);
 				rollbackWriter.println("!commit " + average);
-				//System.out.println("Requester sent: !commit " + average);
+				// System.out.println("Requester sent: !commit " + average);
 				socketList[j].close();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			
+
 		}
 		this.setRmax(average);
 		return true;

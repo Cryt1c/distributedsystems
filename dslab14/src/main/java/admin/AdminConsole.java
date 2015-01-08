@@ -130,7 +130,7 @@ public class AdminConsole implements IAdminConsole, INotificationCallback, Runna
 	
 	@Override
 	public void notify(String username, int credits) throws RemoteException {
-		// TODO Auto-generated method stub
+		System.out.println("Notification: "+username+" has less than "+credits+" credits.");
 		
 	}
 	

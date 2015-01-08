@@ -23,6 +23,7 @@ import javax.crypto.Mac;
 
 import org.bouncycastle.util.encoders.Base64;
 
+import util.Hasher;
 import util.Keys;
 
 /**
@@ -85,39 +86,27 @@ public class NodeWorker implements Runnable {
 						node.setRmax(Integer.parseInt(temp[1]));
 					}
 				}
+				
 				// another Node stopped the share request
 				else if (temp[0].contains("!rollback")) {
 					System.out.println("Receiver got: !rollback " + temp[1]);
 				}
-
 				// Received String is a calculation
 				else {
 					System.out.println("Node got: new calc");
 
-					// check if HMAC is correct
-					Key secretKey = Keys.readSecretKey(new File(keydir));
-					Mac hMac = Mac.getInstance("HmacSHA256");
-					hMac.init(secretKey);
-					hMac.update((temp[1] + " " + temp[2] + " " + temp[3])
-							.getBytes());
-					byte[] computedHash = hMac.doFinal();
-					byte[] receivedHash = Base64.decode(temp[0].getBytes());
-					boolean validHash = MessageDigest.isEqual(computedHash,
-							receivedHash);
-					if (false) {
+					// checks if message from CloudController has been tampered
+					if (Hasher.testHash(input, keydir)) {
 						temp = Arrays.copyOfRange(temp, 1, temp.length);
 						result = calculate(temp);
 						log(temp, result);
-						writer.println(result);
+					} else {
+						result = "!tampered " + Hasher.getMessage(input);
 					}
-					else {
-						result = new String(Base64.encode(computedHash)) + " !tampered " + temp[1] + " " + temp[2] + " " + temp[3];
-						System.out.println(result);
-						writer.println(result);
-					}
+					writer.println(Hasher.hash(result, keydir));
 				}
 			}
-		} catch (IOException | NoSuchAlgorithmException | InvalidKeyException e) {
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		this.close();
@@ -155,7 +144,8 @@ public class NodeWorker implements Runnable {
 			return new SimpleDateFormat("yyyyMMdd_HHmmss.SSS");
 		}
 	};
-
+	
+	// logs the calculation
 	private void log(String[] input, String result) {
 		Date now = new Date();
 		String date = formatter.get().format(now);
@@ -174,7 +164,8 @@ public class NodeWorker implements Runnable {
 		fileWriter.close();
 
 	}
-
+	
+	// calculates and returns the result
 	private String calculate(String[] calc) {
 		int op1;
 		try {

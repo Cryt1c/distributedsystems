@@ -18,6 +18,7 @@ import javax.crypto.Mac;
 
 import org.bouncycastle.util.encoders.Base64;
 
+import util.Hasher;
 import util.Keys;
 
 /**
@@ -213,7 +214,7 @@ public class CloudWorker implements Runnable {
 	private String sendCalculation(Node node, String[] calc) {
 		String result = "Error: no result";
 		String sCalc = calc[0] + " " + calc[1] + " " + calc[2];
-		
+
 		if (node == null) {
 			return "Error: no node for this calculation";
 		}
@@ -228,30 +229,21 @@ public class CloudWorker implements Runnable {
 				calcWriter = new PrintWriter(calcSocket.getOutputStream(), true);
 				calcReader = new BufferedReader(new InputStreamReader(
 						calcSocket.getInputStream()));
-				
+
 				// adds the HMAC to the calculation
-				Key secretKey = Keys.readSecretKey(new File(keydir));
-				Mac hMac = Mac.getInstance("HmacSHA256");
-				hMac.init(secretKey);
-				hMac.update(sCalc.getBytes());
-				byte[] hash = hMac.doFinal();
-				sCalc = new String(Base64.encode(hash)) + " " + sCalc;
-				
-				System.out.println(sCalc);
+				sCalc = Hasher.hash(sCalc, keydir);
 				calcWriter.println(sCalc);
-				
 				result = calcReader.readLine();
 				
+				// if the there's a tampered notification or the result itself has been the client gets a message
+				if (result.contains("!tampered") || !Hasher.testHash(result, keydir)) {
+					return "The message has been tampered.";
+				}
+
 			} catch (IOException e) {
 				e.printStackTrace();
 				this.closeCalc();
 				return "Error: technical problems";
-			} catch (NoSuchAlgorithmException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (InvalidKeyException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
 			}
 		}
 		this.closeCalc();
@@ -261,7 +253,7 @@ public class CloudWorker implements Runnable {
 			} else
 				node.setUsage(node.getUsage() + 50 * result.length());
 		}
-		return result;
+		return Hasher.getMessage(result);
 	}
 
 	// closes streams and sockets to node

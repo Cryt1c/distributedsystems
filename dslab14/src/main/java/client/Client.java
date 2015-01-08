@@ -157,16 +157,21 @@ public class Client implements IClientCli, Runnable {
 	public String authenticate(String username) throws IOException {
 		 Base64Channel channel =(Base64Channel)this.controllerChannel;		
 		 byte[] base64Challenge = SecurityHelper.generateRandom64(new byte[32]);
-		 File f=new File(config.getString("keys.dir")+username+".pem");
+		 File f=new File(config.getString("keys.dir")+"/"+username+".pem");
 		 channel.setPrivateKey(util.Keys.readPrivatePEM(f));
 		 
 		 // send 1st message
-		 channel.send("authenticate " + username + " " + base64Challenge);
+		 String msg="authenticate " + username + " " + base64Challenge;
+		 System.out.println("Client: send 1st message "+msg);
+		 channel.send(msg);
+		 
 
 		 
 		 // receive 3nd message
+		 msg=channel.receive();
+		 System.out.println("Client: receive 3rd message "+msg);
 		String[] message = channel.receive().split(" ");
-		
+		 
 		if (message[0] != "!ok") {
 			throw new IOException("2nd message:expected !ok but got "
 					+ message[0]+".");

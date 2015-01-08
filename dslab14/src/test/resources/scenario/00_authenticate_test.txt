@@ -1,7 +1,7 @@
 *	CloudController	controller
 *	Client			alice
 *	Node			node1
-
+alice:		!authenticate alice
 alice:		!credits
 >			verify("500", T(test.util.Flag).NOT)
 

@@ -126,7 +126,7 @@ public class ClientShell {
 			return client.authenticate(username);
 		} catch (IOException e) {
 			client.exit();
-			return ("couldn't authenticate " + username);
+			return (e.getMessage());
 		}
 	}
 

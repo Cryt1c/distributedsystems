@@ -15,6 +15,9 @@ import java.util.List;
  * first submission.
  */
 public interface IAdminConsole extends Remote {
+	
+	
+	String test()throws RemoteException;
 	/**
 	 * Registers the given {@link INotificationCallback} to be invoked if the
 	 * account of a certain user has less than the given amount of credits.

@@ -5,10 +5,13 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.rmi.AlreadyBoundException;
+import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -27,10 +30,9 @@ import java.util.concurrent.Executors;
 
 import model.ComputationRequestInfo;
 import admin.INotificationCallback;
-
 import util.Config;
 
-public class CloudController implements ICloudControllerCli, IAdminConsole, Runnable {
+public class CloudController1 implements ICloudControllerCli,IAdminConsole, Runnable {
 
 	static CloudController cloudcontroller;
 	private String componentName;
@@ -53,6 +55,7 @@ public class CloudController implements ICloudControllerCli, IAdminConsole, Runn
 	private String bindingName;
 	private String host;
 	private CloudWorker cw;
+	
 
 	// Timer for the node.isAlive check
 	TimerTask task = new TimerTask() {
@@ -103,6 +106,7 @@ public class CloudController implements ICloudControllerCli, IAdminConsole, Runn
 
 	// adds all users from the config-file to the users-list and sets the
 	// credits
+	// Also reads the rmi relevant properties now
 	private void extractConfig() {
 		Config userconfig = new Config("user");
 		Iterator<String> iter = userconfig.listKeys().iterator();
@@ -122,6 +126,7 @@ public class CloudController implements ICloudControllerCli, IAdminConsole, Runn
 		rmiPort = config.getInt("controller.rmi.port");
 		host = config.getString("controller.host");
 		bindingName = config.getString("binding.name");
+		//System.out.println(rmiPort);
 	}
 
 	// register this object at the shell and run the shell
@@ -152,10 +157,11 @@ public class CloudController implements ICloudControllerCli, IAdminConsole, Runn
 
 						// receive the packet, extracts the data and creates new
 						// nodes if needed
+
 						datagramSocket.receive(packet);
 						String[] message = new String(packet.getData())
 								.split(" ");
-
+						
 						if (message[0].contains("!hello")) {
 							twoPhaseCommit(packet);
 						} else {
@@ -163,8 +169,9 @@ public class CloudController implements ICloudControllerCli, IAdminConsole, Runn
 									+ message[1].trim())) {
 
 								nodeSet.add(new Node(packet.getAddress(),
-										Integer.parseInt(message[2].trim()),
-										message[0], message[1].trim(), config
+										Integer.parseInt(message[2]
+												.trim()), message[0],
+										message[1].trim(), config
 												.getInt("node.timeout")));
 							}
 							lastpacket.put(message[0],
@@ -199,7 +206,7 @@ public class CloudController implements ICloudControllerCli, IAdminConsole, Runn
 						Socket clientSocket = null;
 						clientSocket = serverSocket.accept();
 						if (!clientSocket.equals(null)) {
-							workers.add(new CloudWorker(config.getString("hmac.key"), clientSocket,
+							workers.add(new CloudWorker(clientSocket,
 									cloudcontroller));
 							executorService.execute(workers.get(workers.size() - 1));
 						}
@@ -246,6 +253,8 @@ public class CloudController implements ICloudControllerCli, IAdminConsole, Runn
 	// closes the sockets and cancels the timer and the executorService
 	@Override
 	public String exit() {
+		//==============================================================
+		//HIER FEHLT NOCH EIN UNBIND UND UNEXPORT
 		if (!this.closed) {
 			this.closed = true;
 			executorService.shutdownNow();
@@ -282,20 +291,40 @@ public class CloudController implements ICloudControllerCli, IAdminConsole, Runn
 	private void twoPhaseCommit(DatagramPacket commit) {
 		String message = "!init" + "\n" + nodeSet.getIPPort() + rmax;
 		System.out.println(message);
-
+		
 		byte[] buf = message.getBytes();
 
 		commit = new DatagramPacket(buf, buf.length, commit.getSocketAddress());
-
+		
+		
 		try {
 			datagramSocket.send(commit);
-
+			
 		} catch (IOException e) {
 			System.out.println("couldn't send twoPhaseCommit");
 		}
 		return;
 	}
+	
+	
+	//=================RMI=================
+	/**
+	 *Exports the CloudController remote Object, creates the registry on the local host which will accept
+	 * access on the rmiPort and rebinds the CloudController stub to the name residing in the binding name.
+	 * @throws AlreadyBoundException 
+	 */
+	private void startAdminComponent() throws AlreadyBoundException{
+		try {
+			registry = LocateRegistry.createRegistry(rmiPort);
+			IAdminConsole remote = (IAdminConsole) UnicastRemoteObject.exportObject(this, 0);
+			registry.bind(bindingName, remote);
+		} catch (RemoteException e) {
+			e.printStackTrace();
+		}
+	}
 
+	
+	
 	/**
 	 * @param args
 	 *            the first argument is the name of the {@link CloudController}
@@ -306,11 +335,6 @@ public class CloudController implements ICloudControllerCli, IAdminConsole, Runn
 				new Config("controller"), System.in, System.out);
 		// TODO: start the cloud controller
 		cloudcontroller.run();
-	}
-
-	@Override
-	public String test() throws RemoteException {
-		return "erfolgreicher test";
 	}
 
 	@Override
@@ -344,7 +368,6 @@ public class CloudController implements ICloudControllerCli, IAdminConsole, Runn
 		return stat;
 	}
 
-
 	@Override
 	public Key getControllerPublicKey() throws RemoteException {
 		// TODO Auto-generated method stub
@@ -357,20 +380,9 @@ public class CloudController implements ICloudControllerCli, IAdminConsole, Runn
 		// TODO Auto-generated method stub
 		
 	}
-	
-	//=================RMI=================
-	/**
-	 *Exports the CloudController remote Object, creates the registry on the local host which will accept
-	 * access on the rmiPort and rebinds the CloudController stub to the name residing in the binding name.
-	 * @throws AlreadyBoundException 
-	 */
-	private void startAdminComponent() throws AlreadyBoundException{
-		try {
-			registry = LocateRegistry.createRegistry(rmiPort);
-			IAdminConsole remote = (IAdminConsole) UnicastRemoteObject.exportObject(this, 0);
-			registry.bind(bindingName, remote);
-		} catch (RemoteException e) {
-			e.printStackTrace();
-		}
+
+	@Override
+	public String test() throws RemoteException {
+		return "erfolgreicher test";
 	}
 }
